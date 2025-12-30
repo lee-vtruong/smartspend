@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartSpend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --color-primary: #14B8A6; /* Teal 500 */
+        --color-primary-focus: #0D9488; /* Teal 600 */
+        --color-accent: #F97316; /* Orange 500 */
+        --color-background: #F8FAFC; /* Slate 50 */
+        --color-card: #FFFFFF;
+        --color-text: #1F2937; /* Gray 800 */
+        --color-muted: #6B7280; /* Gray 500 */
+        --color-success: #10B981; /* Emerald 500 */
+        --color-danger: #EF4444; /* Red 500 */
+        --color-warning: #F59E0B; /* Amber 500 */
+        --color-primary-content: #FFFFFF;
+        --color-card-border: #E5E7EB; /* Gray 200 */
+        --gradient-from: #14B8A6;
+        --gradient-to: #0F766E;
+        --ring-color: rgba(20, 184, 166, 0.3);
+      }
+      html.dark {
+        --color-primary: #2DD4BF; /* Teal 400 */
+        --color-primary-focus: #14B8A6; /* Teal 500 */
+        --color-accent: #FB923C; /* Orange 400 */
+        --color-background: #0F172A; /* Slate 900 */
+        --color-card: #1E293B; /* Slate 800 */
+        --color-text: #E2E8F0; /* Slate 200 */
+        --color-muted: #94A3B8; /* Slate 400 */
+        --color-success: #34D399; /* Emerald 400 */
+        --color-danger: #F87171; /* Red 400 */
+        --color-warning: #FBBF24; /* Amber 400 */
+        --color-primary-content: #0F172A;
+        --color-card-border: #334155; /* Slate 700 */
+        --gradient-from: #2DD4BF;
+        --gradient-to: #0D9488;
+        --ring-color: rgba(45, 212, 191, 0.3);
+      }
+      html.special {
+        --color-primary: #EC4899; /* Pink 500 */
+        --color-primary-focus: #DB2777; /* Pink 600 */
+        --color-accent: #8B5CF6; /* Violet 500 */
+        --color-background: #F8FAFC;
+        --color-card: #FFFFFF;
+        --color-text: #1F2937;
+        --color-muted: #6B7280;
+        --color-success: #10B981;
+        --color-danger: #EF4444;
+        --color-warning: #F59E0B;
+        --color-primary-content: #FFFFFF;
+        --color-card-border: #E5E7EB;
+        --gradient-from: #EF4444;
+        --gradient-to: #8B5CF6;
+        --ring-color: rgba(236, 72, 153, 0.3);
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        color: var(--color-text);
+        background: linear-gradient(-45deg, #eef2f3, #e6e9f0, var(--color-background));
+        background-size: 400% 400%;
+        animation: gradientBG 20s ease infinite;
+      }
+      html.dark body {
+        background: linear-gradient(-45deg, var(--color-background), #1e293b, #0f172a, #1e293b);
+        background-size: 400% 400%;
+        animation: gradientBG 20s ease infinite;
+      }
+      html.special body {
+        background: linear-gradient(-45deg, #fecaca, #fef08a, #d9f99d, #bfdbfe, #ddd6fe, #fbcfe8);
+        background-size: 400% 400%;
+        animation: gradientBG 20s ease infinite;
+      }
+
+      @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      /* Transitions */
+      button, a, input, select, textarea {
+        transition: all 0.2s ease-in-out;
+      }
+      button:focus, a:focus {
+        outline: none;
+      }
+      input:focus, select:focus, textarea:focus {
+          box-shadow: 0 0 0 3px var(--ring-color);
+          border-color: var(--color-primary);
+      }
+
+      /* Custom animations */
+      @keyframes fade-in-down {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-down {
+        animation: fade-in-down 0.2s ease-out forwards;
+      }
+
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(10px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.3s ease-out forwards;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: 'var(--color-primary)',
+              'primary-focus': 'var(--color-primary-focus)',
+              'primary-content': 'var(--color-primary-content)',
+              accent: 'var(--color-accent)',
+              background: 'var(--color-background)',
+              card: 'var(--color-card)',
+              text: 'var(--color-text)',
+              muted: 'var(--color-muted)',
+              success: 'var(--color-success)',
+              danger: 'var(--color-danger)',
+              warning: 'var(--color-warning)',
+              'card-border': 'var(--color-card-border)',
+              'gradient-from': 'var(--gradient-from)',
+              'gradient-to': 'var(--gradient-to)',
+            },
+            animation: {
+              'fade-in-down': 'fade-in-down 0.2s ease-out forwards',
+              'fade-in-up': 'fade-in-up 0.3s ease-out forwards',
+              'jiggle': 'jiggle 0.6s ease-in-out',
+            },
+            keyframes: {
+              jiggle: {
+                '0%, 100%': { transform: 'rotate(0)' },
+                '25%': { transform: 'rotate(-8deg)' },
+                '75%': { transform: 'rotate(8deg)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "express": "https://esm.sh/express@^5.2.1",
+    "cors": "https://esm.sh/cors@^2.8.5"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

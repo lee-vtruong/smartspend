@@ -1,0 +1,5 @@
+{
+  "name": "SmartSpend",
+  "description": "A personal & group expense manager with AI-powered features for spending forecasts and smart suggestions. Manage wallets, track transactions, set budgets, and gain insights into your financial habits.",
+  "requestFramePermissions": []
+}
