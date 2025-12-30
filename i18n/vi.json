@@ -1,0 +1,474 @@
+{
+  "common": {
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "add": "Thêm",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "saveChanges": "Lưu thay đổi",
+    "savePayment": "Lưu thanh toán"
+  },
+  "sidebar": {
+    "dashboard": "Bảng điều khiển",
+    "transactions": "Giao dịch",
+    "reports": "Báo cáo",
+    "groups": "Nhóm",
+    "debts": "Nợ & Cho vay",
+    "premium": "AI Premium",
+    "settings": "Cài đặt"
+  },
+  "header": {
+    "welcome": "Chào mừng trở lại!"
+  },
+  "dashboard": {
+    "overBudget": "Đã vượt ngân sách!",
+    "budgetWarning": "Ngân sách sắp hết!",
+    "recentTransactions": "Giao dịch gần đây",
+    "noTransactions": "Chưa có giao dịch nào.",
+    "myWallets": "Ví của tôi",
+    "addWalletTooltip": "Thêm ví mới",
+    "budgets": "Ngân sách",
+    "addBudgetTooltip": "Thêm ngân sách mới",
+    "noBudgets": "Chưa có ngân sách nào.",
+    "financialGoals": "Mục tiêu tài chính",
+    "addGoalTooltip": "Thêm mục tiêu mới",
+    "noGoals": "Chưa có mục tiêu nào.",
+    "goalCompleted": "Hoàn thành!",
+    "fundGoalTooltip": "Nạp tiền vào mục tiêu",
+    "addTransactionTooltip": "Thêm giao dịch mới"
+  },
+  "financialOverview": {
+    "title": "Sức khỏe tài chính",
+    "totalAssets": "Tổng tài sản của bạn",
+    "monthlyIncome": "Thu nhập tháng này",
+    "monthlyExpense": "Chi tiêu tháng này"
+  },
+  "achievements": {
+    "title": "Bộ sưu tập Danh hiệu"
+  },
+  "achievementUnlocked": {
+    "title": "Đã mở khóa Danh hiệu!",
+    "button": "Tuyệt vời!"
+  },
+  "chatbot": {
+    "title": "Trợ lý Tài chính Mony",
+    "placeholder": "Hỏi Mony về tài chính của bạn..."
+  },
+  "addWallet": {
+    "title": "Thêm ví mới",
+    "nameLabel": "Tên ví",
+    "namePlaceholder": "Ví dụ: Tiền mặt, Techcombank",
+    "typeLabel": "Loại ví",
+    "initialBalanceLabel": "Số dư ban đầu",
+    "currencyLabel": "Loại tiền tệ",
+    "addButton": "Thêm ví",
+    "walletType": {
+      "cash": "Tiền mặt",
+      "bank": "Ngân hàng",
+      "e-wallet": "Ví điện tử"
+    }
+  },
+   "editWallet": {
+    "title": "Chỉnh sửa ví",
+    "balanceNote": "Số dư không thể chỉnh sửa. Vui lòng tạo giao dịch điều chỉnh nếu cần.",
+    "deleteConfirmation": "Bạn có chắc chắn muốn xóa ví này không?",
+    "deleteError": "Không thể xóa ví vì vẫn còn giao dịch liên quan. Vui lòng chuyển các giao dịch sang ví khác trước khi xóa."
+  },
+  "addBudget": {
+    "title": "Thêm ngân sách mới",
+    "categoryLabel": "Danh mục",
+    "limitLabel": "Giới hạn chi tiêu",
+    "limitPlaceholder": "Ví dụ: 5000000",
+    "allCategoriesAssigned": "Tất cả danh mục chi tiêu đã có ngân sách.",
+    "validationError": "Vui lòng chọn danh mục và nhập giới hạn hợp lệ!",
+    "addButton": "Thêm ngân sách"
+  },
+  "addTransaction": {
+    "title": "Thêm giao dịch mới",
+    "editTitle": "Chỉnh sửa giao dịch",
+    "aiPrompt": "Nhập nhanh bằng AI",
+    "aiPlaceholder": "Ví dụ: đi xem phim cgv hết 250k",
+    "manualEntry": "hoặc điền thủ công",
+    "expense": "Chi tiêu",
+    "income": "Thu nhập",
+    "amountLabel": "Số tiền",
+    "noteLabel": "Ghi chú",
+    "notePlaceholderExpense": "Ví dụ: Cà phê Starbucks",
+    "notePlaceholderIncome": "Ví dụ: Lương tháng 7",
+    "categoryLabel": "Danh mục",
+    "walletLabel": "Ví",
+    "dateLabel": "Ngày",
+    "validationError": "Vui lòng điền đầy đủ thông tin!"
+  },
+  "transactions": {
+    "title": "Tất cả Giao dịch",
+    "transferButton": "Chuyển tiền",
+    "addButton": "Thêm giao dịch",
+    "searchPlaceholder": "Tìm kiếm theo ghi chú...",
+    "allCategories": "Tất cả danh mục",
+    "allWallets": "Tất cả các ví",
+    "noTransactions": "Không tìm thấy giao dịch nào.",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa giao dịch này không?",
+    "editTooltip": "Chỉnh sửa",
+    "deleteTooltip": "Xóa"
+  },
+  "groups": {
+    "title": "Quỹ du lịch & Nhóm",
+    "createButton": "Tạo nhóm mới",
+    "myGroups": "Các nhóm của bạn",
+    "selectPrompt": "Chọn một nhóm để xem chi tiết.",
+    "loading": "Đang tải dữ liệu nhóm...",
+    "totalFund": "Tổng quỹ",
+    "spent": "Đã chi tiêu",
+    "members": "Thành viên",
+    "currency": "Tiền tệ",
+    "overviewTab": "Tổng quan",
+    "transactionsTab": "Giao dịch",
+    "settleTab": "Thanh toán",
+    "owedByGroup": "Nhóm nợ bạn",
+    "owedToGroup": "Bạn nợ nhóm",
+    "paidSuffix": "đã trả",
+    "noTransactions": "Chưa có giao dịch nào trong nhóm này.",
+    "settleTitle": "Cách đơn giản nhất để thanh toán:",
+    "allSettled": "Mọi người đều đã sòng phẳng!",
+    "addTransactionButton": "Thêm Giao dịch",
+    "noGroups": {
+        "title": "Bắt đầu quản lý chi tiêu nhóm",
+        "description": "Tạo một nhóm mới để theo dõi chi phí cho chuyến đi, sự kiện hoặc dự án tiếp theo của bạn.",
+        "button": "Tạo nhóm đầu tiên"
+    }
+  },
+  "addGroupTransaction": {
+    "title": "Thêm Giao dịch Nhóm",
+    "expense": "Chi phí",
+    "contribution": "Đóng góp",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholderExpense": "Ví dụ: Tiền khách sạn",
+    "descriptionPlaceholderContribution": "Ví dụ: An đóng tiền",
+    "amountLabel": "Số tiền",
+    "dateLabel": "Ngày",
+    "payerLabel": "Người trả",
+    "participantsLabel": "Chia cho ai?",
+    "selectAll": "Chọn tất cả",
+    "deselectAll": "Bỏ chọn tất cả",
+    "validationError": "Vui lòng điền đủ thông tin: mô tả, số tiền > 0, và người tham gia."
+  },
+  "transfer": {
+      "to": "Chuyển tới",
+      "from": "Nhận từ"
+  },
+  "fundGoal": {
+      "transactionPayee": "Tiết kiệm cho"
+  },
+  "addDebt": {
+      "borrowFrom": "Vay từ",
+      "lendTo": "Cho vay"
+  },
+  "recordPayment": {
+      "payTo": "Trả nợ cho",
+      "collectFrom": "Thu nợ từ"
+  },
+  "reports": {
+    "title": "Báo cáo & Phân tích",
+    "summaryTitle": "Tóm tắt tài chính",
+    "totalIncome": "Tổng thu nhập",
+    "totalExpense": "Tổng chi tiêu",
+    "balance": "Số dư",
+    "spendingTrend": "Xu hướng chi tiêu",
+    "incomeVsExpense": "Thu nhập vs Chi tiêu",
+    "spendingByCategory": "Chi tiêu theo danh mục",
+    "income": "Thu nhập",
+    "expense": "Chi tiêu",
+    "timeframe": {
+      "week": "Tuần",
+      "month": "Tháng",
+      "year": "Năm"
+    }
+  },
+  "settings": {
+    "profile": {
+        "title": "Hồ sơ cá nhân",
+        "changeAvatar": "Thay đổi ảnh",
+        "avatarHint": "JPG, GIF or PNG. 1MB max.",
+        "displayName": "Tên hiển thị",
+        "email": "Email",
+        "saveButton": "Lưu thay đổi"
+    },
+    "profileUpdateAlert": {
+        "message": "Hồ sơ đã được cập nhật"
+    },
+    "categories": {
+      "title": "Quản lý Danh mục",
+      "description": "Tùy chỉnh các danh mục để phù hợp với thói quen chi tiêu của bạn.",
+      "add": "Thêm Danh mục",
+      "income": "Danh mục Thu nhập",
+      "expense": "Danh mục Chi tiêu",
+      "noCustom": "Bạn chưa có danh mục tùy chỉnh nào."
+    },
+    "addCategory": {
+      "title": "Tạo Danh mục mới",
+      "editTitle": "Chỉnh sửa Danh mục",
+      "nameLabel": "Tên danh mục",
+      "namePlaceholder": "Ví dụ: Tiền học cho con",
+      "typeLabel": "Loại danh mục",
+      "iconLabel": "Chọn biểu tượng",
+      "nameRequired": "Tên danh mục là bắt buộc.",
+      "nameExists": "Tên danh mục này đã tồn tại."
+    },
+    "deleteCategory": {
+      "title": "Xóa Danh mục",
+      "warning": "Danh mục \"{{categoryName}}\" đang được sử dụng trong {{count}} giao dịch. Để xóa, vui lòng chọn một danh mục khác để gán lại các giao dịch này.",
+      "warningNoTransactions": "Bạn có chắc chắn muốn xóa danh mục \"{{categoryName}}\" không?",
+      "reassignLabel": "Gán lại giao dịch cho",
+      "confirmButton": "Xác nhận & Xóa"
+    },
+    "appearance": {
+        "title": "Giao diện & Hiển thị",
+        "description": "Chọn một giao diện để cá nhân hóa trải nghiệm của bạn."
+    },
+    "themes": {
+        "light": "Sáng",
+        "dark": "Tối",
+        "special": "Special"
+    },
+    "language": {
+        "title": "Ngôn ngữ"
+    },
+    "travelMode": {
+        "title": "Chế độ Du lịch",
+        "enable": "Bật Chế độ Du lịch",
+        "currency": "Tiền tệ du lịch",
+        "description": "Tất cả số dư và giao dịch sẽ được hiển thị theo loại tiền tệ này."
+    },
+    "notifications": {
+      "title": "Thông báo & Báo cáo",
+      "emailReports": "Báo cáo qua Email",
+      "weeklySummary": "Tóm tắt hàng tuần",
+      "monthlySummary": "Tóm tắt hàng tháng",
+      "pushNotifications": "Thông báo đẩy",
+      "budgetAlerts": "Cảnh báo ngân sách",
+      "billReminders": "Nhắc nhở hóa đơn",
+      "debtReminders": "Nhắc nhở nợ/cho vay quá hạn"
+    },
+    "security": {
+        "title": "Bảo mật & Tác vụ",
+        "changePassword": "Thay đổi mật khẩu",
+        "twoFactorAuth": "Xác thực hai yếu tố (2FA)",
+        "setPin": "Thiết lập mã PIN",
+        "logout": "Đăng xuất",
+        "deleteAccount": "Xóa tài khoản"
+    }
+  },
+  "debts": {
+    "title": "Quản lý Nợ & Cho vay",
+    "addNewButton": "Thêm khoản mới",
+    "debtsTab": "Khoản bạn nợ",
+    "loansTab": "Khoản bạn cho vay",
+    "remaining": "Còn lại",
+    "paid": "Đã trả",
+    "total": "Tổng",
+    "overdue": "Quá hạn!",
+    "dueDate": "Hạn chót",
+    "recordPaymentButton": "Ghi thanh toán",
+    "noDebts": "Bạn không có khoản nợ nào.",
+    "noLoans": "Bạn không có khoản cho vay nào."
+  },
+  "addDebtLoan": {
+    "title": "Thêm khoản Nợ / Cho vay mới",
+    "iOwe": "Tôi nợ",
+    "iLend": "Tôi cho vay",
+    "personLabel": "Người liên quan",
+    "personPlaceholderOwe": "Người bạn nợ",
+    "personPlaceholderLend": "Người nợ bạn",
+    "amountLabel": "Số tiền",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholder": "Ví dụ: Vay tiền mua sách",
+    "dueDateLabel": "Ngày đáo hạn",
+    "validationError": "Vui lòng điền đầy đủ thông tin người liên quan và số tiền."
+  },
+  "recordPayment": {
+    "titleDebt": "Thanh toán cho khoản nợ",
+    "titleLoan": "Thanh toán cho khoản vay",
+    "recordingFor": "Ghi nhận thanh toán cho",
+    "person": "Người liên quan",
+    "remaining": "Số tiền còn lại",
+    "paymentAmount": "Số tiền thanh toán",
+    "errorAmountPositive": "Số tiền phải lớn hơn 0.",
+    "errorAmountExceeds": "Số tiền không thể lớn hơn số tiền còn lại ({{amount}})"
+  },
+  "premium": {
+      "title": "Phân tích & Đề xuất Thông minh",
+      "loading": "AI đang phân tích dữ liệu của bạn...",
+      "error": "Không thể tải dữ liệu AI. Vui lòng thử lại.",
+      "forecastTitle": "Dự báo chi tiêu tháng tới",
+      "assistantTitle": "Trợ lý tài chính AI",
+      "suggestionsTitle": "Đề xuất cho bạn",
+      "summary": "Dựa trên phân tích, chi tiêu tháng tới của bạn được dự báo sẽ tương tự tháng này. Có một vài cơ hội để tối ưu hóa chi tiêu ở hạng mục Ăn uống và Mua sắm.",
+      "suggestions": {
+          "optimizeFood": {
+              "title": "Tối ưu chi tiêu Ăn uống",
+              "description": "Bạn chi trung bình 250,000đ cho việc ăn ngoài vào cuối tuần. Hãy thử tự nấu ăn 1 ngày cuối tuần để tiết kiệm khoảng 10-15%."
+          },
+          "reviewSubscriptions": {
+              "title": "Xem lại các gói đăng ký Mua sắm online",
+              "description": "Bạn có 3 gói đăng ký dịch vụ đang hoạt động. Hãy xem lại và hủy những gói không cần thiết để tiết kiệm chi phí."
+          },
+          "usePublicTransport": {
+              "title": "Sử dụng phương tiện công cộng",
+              "description": "Xem xét sử dụng xe buýt hoặc các phương tiện công cộng cho các quãng đường ngắn để giảm chi phí di chuyển hàng tháng."
+          }
+      }
+  },
+  "category": {
+    "food": "Ăn uống",
+    "beverage": "Đồ uống & Giải trí",
+    "shopping": "Mua sắm",
+    "transport": "Di chuyển",
+    "bills": "Hóa đơn",
+    "entertainment": "Giải trí",
+    "goalSaving": "Tiết kiệm mục tiêu",
+    "transferOut": "Chuyển khoản",
+    "lending": "Cho vay",
+    "debtRepayment": "Trả nợ",
+    "salary": "Lương",
+    "bonus": "Thưởng",
+    "otherIncome": "Thu nhập khác",
+    "transferIn": "Nhận chuyển khoản",
+    "borrowing": "Vay nợ",
+    "debtCollection": "Thu nợ"
+  },
+  "achievement": {
+    "firstTransaction": {
+        "title": "Người mới bắt đầu",
+        "description": "Ghi nhận giao dịch đầu tiên của bạn."
+    },
+    "firstBudget": {
+        "title": "Nhà hoạch định",
+        "description": "Tạo ngân sách đầu tiên để quản lý chi tiêu."
+    },
+    "firstGoal": {
+        "title": "Người mơ mộng",
+        "description": "Tạo mục tiêu tài chính đầu tiên."
+    },
+    "goalMaster": {
+        "title": "Bậc thầy tiết kiệm",
+        "description": "Hoàn thành một mục tiêu tài chính."
+    },
+    "investor": {
+        "title": "Nhà đầu tư",
+        "description": "Nạp tiền 5 lần vào một mục tiêu."
+    },
+    "socializer": {
+        "title": "Người giao tiếp",
+        "description": "Tạo nhóm chi tiêu đầu tiên."
+    }
+  },
+  "admin": {
+    "sidebar": {
+      "title": "Bảng quản trị",
+      "dashboard": "Tổng quan",
+      "userManagement": "Quản lý Người dùng",
+      "systemReports": "Hệ thống & Báo cáo",
+      "notifications": "Thông báo"
+    },
+    "dashboard": {
+      "title": "Bảng điều khiển Quản trị",
+      "totalUsers": "Tổng số người dùng",
+      "activeAccounts": "Tài khoản hoạt động",
+      "premiumSubscribers": "Người dùng Premium",
+      "totalRevenue": "Tổng doanh thu",
+      "userManagementCardTitle": "Quản lý Người dùng",
+      "userManagementCardDesc": "Xem, tìm kiếm và quản lý tất cả tài khoản người dùng trong hệ thống.",
+      "systemReportsCardTitle": "Hệ thống & Báo cáo",
+      "systemReportsCardDesc": "Sao lưu, khôi phục dữ liệu và xem các báo cáo tổng hợp."
+    },
+    "userManagement": {
+      "title": "Quản lý Người dùng",
+      "searchPlaceholder": "Tìm kiếm theo tên hoặc email...",
+      "table": {
+        "user": "Người dùng",
+        "status": "Trạng thái",
+        "actions": "Hành động"
+      },
+      "statusActive": "Hoạt động",
+      "statusLocked": "Bị khóa",
+      "lockAction": "Khóa",
+      "unlockAction": "Mở khóa",
+      "noUsersFound": "Không tìm thấy người dùng nào."
+    },
+    "systemReports": {
+      "title": "Hệ thống & Báo cáo",
+      "systemManagement": "Quản lý Hệ thống",
+      "backupButton": "Sao lưu Dữ liệu",
+      "backupSuccess": "Đã bắt đầu quá trình sao lưu hệ thống.",
+      "restoreButton": "Khôi phục Dữ liệu",
+      "restoreSuccess": "Đã bắt đầu quá trình khôi phục hệ thống.",
+      "userStatusReport": "Báo cáo Tình trạng Người dùng",
+      "premiumRevenueReport": "Báo cáo Doanh thu Premium",
+      "revenue": "Doanh thu"
+    },
+    "notifications": {
+      "title": "Quản lý Thông báo",
+      "composeTitle": "Soạn Thông báo",
+      "form": {
+        "titleLabel": "Tiêu đề",
+        "titlePlaceholder": "Ví dụ: Bảo trì Hệ thống",
+        "messageLabel": "Nội dung",
+        "messagePlaceholder": "Nhập nội dung thông báo cho tất cả người dùng...",
+        "sendSuccess": "Gửi thông báo thành công!",
+        "sendButton": "Gửi Thông báo"
+      },
+      "historyTitle": "Lịch sử Thông báo đã gửi",
+      "historyEmpty": "Chưa có thông báo nào được gửi.",
+      "validationError": "Tiêu đề và nội dung không được để trống."
+    }
+  },
+  "auth": {
+    "signupSuccess": {
+      "title": "Đăng ký thành công!",
+      "message": "Chúng tôi đã gửi một liên kết xác thực đến địa chỉ email của bạn. Vui lòng kiểm tra hộp thư đến và làm theo hướng dẫn để kích hoạt tài khoản.",
+      "button": "Quay lại Đăng nhập"
+    },
+    "validation": {
+      "length": "Ít nhất 8 ký tự",
+      "lowercase": "Chứa một chữ cái viết thường (a-z)",
+      "uppercase": "Chứa một chữ cái viết hoa (A-Z)",
+      "number": "Chứa một chữ số (0-9)",
+      "special": "Chứa một ký tự đặc biệt (!@#...)",
+      "match": "Mật khẩu khớp nhau",
+      "formError": "Vui lòng đảm bảo tất cả các trường đã được điền và mật khẩu đáp ứng tất cả các yêu cầu.",
+      "passwordConfirmLabel": "Xác nhận Mật khẩu"
+    },
+    "forgotPassword": {
+      "title": "Đặt lại Mật khẩu",
+      "enterEmailPrompt": "Nhập email của bạn và chúng tôi sẽ gửi một mã để bạn lấy lại quyền truy cập vào tài khoản.",
+      "emailNotFound": "Email không tồn tại. Vui lòng kiểm tra và thử lại.",
+      "sendCodeButton": "Gửi Mã",
+      "enterOtpTitle": "Kiểm tra email của bạn",
+      "enterOtpPrompt": "Chúng tôi đã gửi một mã 6 chữ số đến {{email}}. Mã sẽ sớm hết hạn, vì vậy vui lòng nhập mã sớm.",
+      "otpLabel": "Mã 6 chữ số",
+      "invalidOtp": "Mã không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.",
+      "verifyButton": "Xác minh",
+      "resendOtp": "Không nhận được mã?",
+      "resendOtpLink": "Gửi lại",
+      "resetTitle": "Tạo Mật khẩu Mới",
+      "resetPrompt": "Mật khẩu mới của bạn phải khác với các mật khẩu đã sử dụng trước đó.",
+      "resetButton": "Đặt lại Mật khẩu",
+      "successTitle": "Đặt lại Mật khẩu Thành công!",
+      "successMessage": "Mật khẩu của bạn đã được cập nhật thành công. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới.",
+      "backToLoginButton": "Quay lại Đăng nhập"
+    }
+  },
+  "changePassword": {
+    "title": "Thay đổi mật khẩu",
+    "success": "Đổi mật khẩu thành công!",
+    "oldPasswordLabel": "Mật khẩu cũ",
+    "newPasswordLabel": "Mật khẩu mới",
+    "error": {
+      "notLoggedIn": "Người dùng chưa đăng nhập.",
+      "notFound": "Không tìm thấy người dùng trong cơ sở dữ liệu.",
+      "wrongOldPassword": "Mật khẩu cũ không chính xác.",
+      "generic": "Đổi mật khẩu thất bại. Vui lòng thử lại."
+    }
+  }
+}

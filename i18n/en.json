@@ -1,0 +1,474 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saveChanges": "Save Changes",
+    "savePayment": "Save Payment"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "reports": "Reports",
+    "groups": "Groups",
+    "debts": "Debts & Loans",
+    "premium": "AI Premium",
+    "settings": "Settings"
+  },
+  "header": {
+    "welcome": "Welcome back!"
+  },
+  "dashboard": {
+    "overBudget": "Over budget!",
+    "budgetWarning": "Budget is almost running out!",
+    "recentTransactions": "Recent Transactions",
+    "noTransactions": "No transactions yet.",
+    "myWallets": "My Wallets",
+    "addWalletTooltip": "Add a new wallet",
+    "budgets": "Budgets",
+    "addBudgetTooltip": "Add a new budget",
+    "noBudgets": "No budgets yet.",
+    "financialGoals": "Financial Goals",
+    "addGoalTooltip": "Add a new goal",
+    "noGoals": "No goals yet.",
+    "goalCompleted": "Completed!",
+    "fundGoalTooltip": "Fund this goal",
+    "addTransactionTooltip": "Add new transaction"
+  },
+  "financialOverview": {
+    "title": "Financial Health",
+    "totalAssets": "Your total assets",
+    "monthlyIncome": "This month's income",
+    "monthlyExpense": "This month's expense"
+  },
+  "achievements": {
+    "title": "Achievement Collection"
+  },
+  "achievementUnlocked": {
+    "title": "Achievement Unlocked!",
+    "button": "Awesome!"
+  },
+  "chatbot": {
+    "title": "Financial Assistant Mony",
+    "placeholder": "Ask Mony about your finances..."
+  },
+  "addWallet": {
+    "title": "Add New Wallet",
+    "nameLabel": "Wallet Name",
+    "namePlaceholder": "E.g., Cash, Techcombank",
+    "typeLabel": "Wallet Type",
+    "initialBalanceLabel": "Initial Balance",
+    "currencyLabel": "Currency",
+    "addButton": "Add Wallet",
+    "walletType": {
+      "cash": "Cash",
+      "bank": "Bank",
+      "e-wallet": "E-Wallet"
+    }
+  },
+  "editWallet": {
+    "title": "Edit Wallet",
+    "balanceNote": "Balance cannot be edited. Please create an adjustment transaction if needed.",
+    "deleteConfirmation": "Are you sure you want to delete this wallet?",
+    "deleteError": "Cannot delete wallet with existing transactions. Please move transactions to another wallet before deleting."
+  },
+  "addBudget": {
+    "title": "Add New Budget",
+    "categoryLabel": "Category",
+    "limitLabel": "Spending Limit",
+    "limitPlaceholder": "E.g., 5000000",
+    "allCategoriesAssigned": "All expense categories already have a budget.",
+    "validationError": "Please select a category and enter a valid limit!",
+    "addButton": "Add Budget"
+  },
+  "addTransaction": {
+    "title": "Add New Transaction",
+    "editTitle": "Edit Transaction",
+    "aiPrompt": "Quick Add with AI",
+    "aiPlaceholder": "E.g., starbucks coffee 75k",
+    "manualEntry": "or enter manually",
+    "expense": "Expense",
+    "income": "Income",
+    "amountLabel": "Amount",
+    "noteLabel": "Note",
+    "notePlaceholderExpense": "E.g., Starbucks Coffee",
+    "notePlaceholderIncome": "E.g., July Salary",
+    "categoryLabel": "Category",
+    "walletLabel": "Wallet",
+    "dateLabel": "Date",
+    "validationError": "Please fill in all fields!"
+  },
+  "transactions": {
+    "title": "All Transactions",
+    "transferButton": "Transfer Money",
+    "addButton": "Add Transaction",
+    "searchPlaceholder": "Search by note...",
+    "allCategories": "All Categories",
+    "allWallets": "All Wallets",
+    "noTransactions": "No transactions found.",
+    "confirmDelete": "Are you sure you want to delete this transaction?",
+    "editTooltip": "Edit",
+    "deleteTooltip": "Delete"
+  },
+  "groups": {
+    "title": "Travel Funds & Groups",
+    "createButton": "Create New Group",
+    "myGroups": "Your Groups",
+    "selectPrompt": "Select a group to see details.",
+    "loading": "Loading group data...",
+    "totalFund": "Total Fund",
+    "spent": "Spent",
+    "members": "Members",
+    "currency": "Currency",
+    "overviewTab": "Overview",
+    "transactionsTab": "Transactions",
+    "settleTab": "Settle Up",
+    "owedByGroup": "Group owes you",
+    "owedToGroup": "You owe group",
+    "paidSuffix": "paid",
+    "noTransactions": "No transactions in this group yet.",
+    "settleTitle": "The simplest way to settle up:",
+    "allSettled": "Everyone is settled up!",
+    "addTransactionButton": "Add Transaction",
+    "noGroups": {
+        "title": "Start Managing Group Expenses",
+        "description": "Create a new group to track expenses for your next trip, event, or project.",
+        "button": "Create Your First Group"
+    }
+  },
+  "addGroupTransaction": {
+    "title": "Add Group Transaction",
+    "expense": "Expense",
+    "contribution": "Contribution",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholderExpense": "E.g., Hotel payment",
+    "descriptionPlaceholderContribution": "E.g., An's contribution",
+    "amountLabel": "Amount",
+    "dateLabel": "Date",
+    "payerLabel": "Paid by",
+    "participantsLabel": "Split between?",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "validationError": "Please fill in all fields: description, amount > 0, and participants."
+  },
+  "transfer": {
+      "to": "Transfer to",
+      "from": "Receive from"
+  },
+  "fundGoal": {
+      "transactionPayee": "Saving for"
+  },
+  "addDebt": {
+      "borrowFrom": "Borrowed from",
+      "lendTo": "Lent to"
+  },
+  "recordPayment": {
+      "payTo": "Repay to",
+      "collectFrom": "Collect from"
+  },
+  "reports": {
+    "title": "Reports & Analysis",
+    "summaryTitle": "Financial Summary",
+    "totalIncome": "Total Income",
+    "totalExpense": "Total Expense",
+    "balance": "Balance",
+    "spendingTrend": "Spending Trend",
+    "incomeVsExpense": "Income vs Expense",
+    "spendingByCategory": "Spending by Category",
+    "income": "Income",
+    "expense": "Expense",
+    "timeframe": {
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    }
+  },
+  "settings": {
+    "profile": {
+        "title": "Profile",
+        "changeAvatar": "Change Avatar",
+        "avatarHint": "JPG, GIF or PNG. 1MB max.",
+        "displayName": "Display Name",
+        "email": "Email",
+        "saveButton": "Save Changes"
+    },
+    "profileUpdateAlert": {
+        "message": "Profile has been updated"
+    },
+     "categories": {
+      "title": "Category Management",
+      "description": "Customize your categories to fit your spending habits.",
+      "add": "Add Category",
+      "income": "Income Categories",
+      "expense": "Expense Categories",
+      "noCustom": "You have no custom categories."
+    },
+    "addCategory": {
+      "title": "Create New Category",
+      "editTitle": "Edit Category",
+      "nameLabel": "Category Name",
+      "namePlaceholder": "E.g., Kids' education",
+      "typeLabel": "Category Type",
+      "iconLabel": "Choose Icon",
+      "nameRequired": "Category name is required.",
+      "nameExists": "This category name already exists."
+    },
+    "deleteCategory": {
+      "title": "Delete Category",
+      "warning": "The category \"{{categoryName}}\" is used in {{count}} transactions. To delete it, please choose another category to reassign these transactions to.",
+      "warningNoTransactions": "Are you sure you want to delete the category \"{{categoryName}}\"?",
+      "reassignLabel": "Reassign transactions to",
+      "confirmButton": "Confirm & Delete"
+    },
+    "appearance": {
+        "title": "Appearance & Display",
+        "description": "Choose a theme to personalize your experience."
+    },
+    "themes": {
+        "light": "Light",
+        "dark": "Dark",
+        "special": "Special"
+    },
+    "language": {
+        "title": "Language"
+    },
+    "travelMode": {
+        "title": "Travel Mode",
+        "enable": "Enable Travel Mode",
+        "currency": "Travel Currency",
+        "description": "All balances and transactions will be displayed in this currency."
+    },
+     "notifications": {
+      "title": "Notifications & Reports",
+      "emailReports": "Email Reports",
+      "weeklySummary": "Weekly summary",
+      "monthlySummary": "Monthly summary",
+      "pushNotifications": "Push Notifications",
+      "budgetAlerts": "Budget alerts",
+      "billReminders": "Bill reminders",
+      "debtReminders": "Overdue debt/loan reminders"
+    },
+    "security": {
+        "title": "Security & Actions",
+        "changePassword": "Change Password",
+        "twoFactorAuth": "Two-Factor Authentication (2FA)",
+        "setPin": "Set up PIN code",
+        "logout": "Log Out",
+        "deleteAccount": "Delete Account"
+    }
+  },
+  "debts": {
+    "title": "Debt & Loan Management",
+    "addNewButton": "Add New",
+    "debtsTab": "Debts",
+    "loansTab": "Loans",
+    "remaining": "Remaining",
+    "paid": "Paid",
+    "total": "Total",
+    "overdue": "Overdue!",
+    "dueDate": "Due date",
+    "recordPaymentButton": "Record Payment",
+    "noDebts": "You have no debts.",
+    "noLoans": "You have no loans."
+  },
+  "addDebtLoan": {
+    "title": "Add New Debt / Loan",
+    "iOwe": "I Owe",
+    "iLend": "I Lend",
+    "personLabel": "Person",
+    "personPlaceholderOwe": "Who you owe",
+    "personPlaceholderLend": "Who owes you",
+    "amountLabel": "Amount",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "E.g., Borrowed for books",
+    "dueDateLabel": "Due Date",
+    "validationError": "Please fill in the person and a valid amount."
+  },
+  "recordPayment": {
+    "titleDebt": "Payment for Debt",
+    "titleLoan": "Payment for Loan",
+    "recordingFor": "Recording payment for",
+    "person": "Person",
+    "remaining": "Remaining amount",
+    "paymentAmount": "Payment Amount",
+    "errorAmountPositive": "Amount must be greater than 0.",
+    "errorAmountExceeds": "Amount cannot be greater than the remaining amount ({{amount}})."
+  },
+  "premium": {
+      "title": "AI Analysis & Suggestions",
+      "loading": "AI is analyzing your data...",
+      "error": "Could not load AI data. Please try again.",
+      "forecastTitle": "Next Month's Spending Forecast",
+      "assistantTitle": "AI Financial Assistant",
+      "suggestionsTitle": "Suggestions for You",
+      "summary": "premium.summary",
+      "suggestions": {
+          "optimizeFood": {
+              "title": "premium.suggestions.optimizeFood.title",
+              "description": "premium.suggestions.optimizeFood.description"
+          },
+          "reviewSubscriptions": {
+              "title": "premium.suggestions.reviewSubscriptions.title",
+              "description": "premium.suggestions.reviewSubscriptions.description"
+          },
+          "usePublicTransport": {
+              "title": "premium.suggestions.usePublicTransport.title",
+              "description": "premium.suggestions.usePublicTransport.description"
+          }
+      }
+  },
+  "category": {
+    "food": "Food",
+    "beverage": "Beverage & Fun",
+    "shopping": "Shopping",
+    "transport": "Transport",
+    "bills": "Bills",
+    "entertainment": "Entertainment",
+    "goalSaving": "Goal Saving",
+    "transferOut": "Transfer Out",
+    "lending": "Lending",
+    "debtRepayment": "Debt Repayment",
+    "salary": "Salary",
+    "bonus": "Bonus",
+    "otherIncome": "Other Income",
+    "transferIn": "Transfer In",
+    "borrowing": "Borrowing",
+    "debtCollection": "Debt Collection"
+  },
+  "achievement": {
+    "firstTransaction": {
+        "title": "Getting Started",
+        "description": "Record your first transaction."
+    },
+    "firstBudget": {
+        "title": "Planner",
+        "description": "Create your first budget to manage spending."
+    },
+    "firstGoal": {
+        "title": "Dreamer",
+        "description": "Create your first financial goal."
+    },
+    "goalMaster": {
+        "title": "Savings Master",
+        "description": "Complete a financial goal."
+    },
+    "investor": {
+        "title": "Investor",
+        "description": "Fund a goal 5 times."
+    },
+    "socializer": {
+        "title": "Socializer",
+        "description": "Create your first spending group."
+    }
+  },
+  "admin": {
+    "sidebar": {
+      "title": "Admin Panel",
+      "dashboard": "Dashboard",
+      "userManagement": "User Management",
+      "systemReports": "System & Reports",
+      "notifications": "Notifications"
+    },
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "totalUsers": "Total Users",
+      "activeAccounts": "Active Accounts",
+      "premiumSubscribers": "Premium Subscribers",
+      "totalRevenue": "Total Revenue",
+      "userManagementCardTitle": "User Management",
+      "userManagementCardDesc": "View, search, and manage all user accounts in the system.",
+      "systemReportsCardTitle": "System & Reports",
+      "systemReportsCardDesc": "Backup, restore data, and view aggregated reports."
+    },
+    "userManagement": {
+      "title": "User Management",
+      "searchPlaceholder": "Search by name or email...",
+      "table": {
+        "user": "User",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "statusActive": "Active",
+      "statusLocked": "Locked",
+      "lockAction": "Lock",
+      "unlockAction": "Unlock",
+      "noUsersFound": "No users found."
+    },
+    "systemReports": {
+      "title": "System & Reports",
+      "systemManagement": "System Management",
+      "backupButton": "Backup Data",
+      "backupSuccess": "System backup process has been initiated.",
+      "restoreButton": "Restore Data",
+      "restoreSuccess": "System restore process has been initiated.",
+      "userStatusReport": "User Status Report",
+      "premiumRevenueReport": "Premium Revenue Report",
+      "revenue": "Revenue"
+    },
+    "notifications": {
+      "title": "Notifications Management",
+      "composeTitle": "Compose Notification",
+      "form": {
+        "titleLabel": "Title",
+        "titlePlaceholder": "E.g., System Maintenance",
+        "messageLabel": "Message",
+        "messagePlaceholder": "Enter the notification message for all users...",
+        "sendSuccess": "Notification sent successfully!",
+        "sendButton": "Send Notification"
+      },
+      "historyTitle": "Sent Notifications History",
+      "historyEmpty": "No notifications sent yet.",
+      "validationError": "Title and message cannot be empty."
+    }
+  },
+  "auth": {
+    "signupSuccess": {
+      "title": "Registration Successful!",
+      "message": "We've sent a verification link to your email address. Please check your inbox and follow the instructions to activate your account.",
+      "button": "Back to Sign In"
+    },
+    "validation": {
+      "length": "At least 8 characters",
+      "lowercase": "Contains a lowercase letter (a-z)",
+      "uppercase": "Contains an uppercase letter (A-Z)",
+      "number": "Contains a number (0-9)",
+      "special": "Contains a special character (!@#...)",
+      "match": "Passwords match",
+      "formError": "Please ensure all fields are filled and the password meets all requirements.",
+      "passwordConfirmLabel": "Confirm Password"
+    },
+     "forgotPassword": {
+      "title": "Reset Password",
+      "enterEmailPrompt": "Enter your email and we'll send you a code to get back into your account.",
+      "emailNotFound": "Email not found. Please check and try again.",
+      "sendCodeButton": "Send Code",
+      "enterOtpTitle": "Check your email",
+      "enterOtpPrompt": "We've sent a 6-digit code to {{email}}. The code expires shortly, so please enter it soon.",
+      "otpLabel": "6-Digit Code",
+      "invalidOtp": "Invalid or expired code. Please try again.",
+      "verifyButton": "Verify",
+      "resendOtp": "Didn't get a code?",
+      "resendOtpLink": "Resend",
+      "resetTitle": "Create New Password",
+      "resetPrompt": "Your new password must be different from previous used passwords.",
+      "resetButton": "Reset Password",
+      "successTitle": "Password Reset!",
+      "successMessage": "Your password has been successfully updated. You can now sign in with your new password.",
+      "backToLoginButton": "Back to Sign In"
+    }
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "success": "Password changed successfully!",
+    "oldPasswordLabel": "Old Password",
+    "newPasswordLabel": "New Password",
+    "error": {
+      "notLoggedIn": "User not logged in.",
+      "notFound": "User not found in database.",
+      "wrongOldPassword": "Old password is not correct.",
+      "generic": "Failed to change password. Please try again."
+    }
+  }
+}
