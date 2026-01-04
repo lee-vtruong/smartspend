@@ -7,28 +7,29 @@ import AddBudgetModal from '../components/AddBudgetModal';
 import AddGoalModal from '../components/AddGoalModal';
 import FundGoalModal from '../components/FundGoalModal';
 import FinancialOverviewCard from '../components/FinancialOverviewCard';
-import Achievements from '../components/Achievements';
-import EditWalletModal from '../components/EditWalletModal';
+import Achievements from '../components/Achievements'; // Đã có file này ở bước 1
+import EditWalletModal from '../components/EditWalletModal'; // Đảm bảo bạn đã có file này
 import { useAppContext } from '../contexts/AppContext';
 
+// --- SUB-COMPONENTS ---
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
   const { t, formatCurrency } = useAppContext();
   return (
-    <li className="flex items-center justify-between py-3">
+    <li className="flex items-center justify-between py-3 group hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition-colors">
       <div className="flex items-center">
-        <div className="p-2 bg-background rounded-full">
+        <div className="p-2 bg-background rounded-full border border-card-border">
           {React.cloneElement(transaction.icon, { className: 'h-6 w-6 text-primary' })}
         </div>
         <div className="ml-4">
-          <p className="font-medium">{transaction.payee}</p>
+          <p className="font-medium text-text">{transaction.payee}</p>
           <p className="text-sm text-muted">{t(transaction.category)}</p>
         </div>
       </div>
       <div className="text-right">
-        <p className={`font-semibold ${transaction.type === 'income' ? 'text-success' : 'text-danger'}`}>
+        <p className={`font-bold ${transaction.type === 'income' ? 'text-success' : 'text-danger'}`}>
           {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
         </p>
-        <p className="text-sm text-muted">{new Date(transaction.date).toLocaleDateString('vi-VN')}</p>
+        <p className="text-xs text-muted">{new Date(transaction.date).toLocaleDateString('vi-VN')}</p>
       </div>
     </li>
   );
@@ -42,31 +43,29 @@ const BudgetProgress: React.FC<{ budget: Budget }> = ({ budget }) => {
   const progressColor = isOverBudget ? 'bg-danger' : percentage > 90 ? 'bg-danger' : (percentage > 75 ? 'bg-warning' : 'bg-success');
 
   return (
-    <div>
+    <div className="mb-2">
       <div className="flex justify-between mb-1">
-        <span className="font-medium text-base">{t(budget.category)}</span>
-        <span className="text-sm">{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</span>
+        <span className="font-bold text-sm text-text">{t(budget.category)}</span>
+        <span className="text-xs font-medium text-muted">{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</span>
       </div>
-      <div className="w-full bg-background rounded-full h-4">
+      <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2.5">
         <div 
-          className={`h-4 rounded-full transition-all duration-500 ${progressColor}`}
+          className={`h-2.5 rounded-full transition-all duration-500 ${progressColor}`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         ></div>
       </div>
-      {isOverBudget && <p className="text-danger text-xs mt-1 text-right">{t('dashboard.overBudget')}</p>}
-       {percentage > 90 && !isOverBudget && <div className="bg-warning/10 border border-warning/20 text-warning text-xs rounded p-1 mt-2">{t('dashboard.budgetWarning')}</div>}
+      {isOverBudget && <p className="text-danger text-xs mt-1 text-right font-bold">{t('dashboard.overBudget')}</p>}
     </div>
   );
 };
 
-
+// --- MAIN DASHBOARD ---
 const Dashboard: React.FC = () => {
   const { 
     wallets, 
     transactions, 
     budgets, 
     goals, 
-    achievements, 
     handleAddWallet,
     handleEditWallet,
     handleDeleteWallet,
@@ -78,6 +77,7 @@ const Dashboard: React.FC = () => {
     formatCurrency
   } = useAppContext();
   
+  // Modal States
   const [isWalletModalOpen, setWalletModalOpen] = useState(false);
   const [isEditWalletModalOpen, setEditWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<Wallet | null>(null);
@@ -87,9 +87,11 @@ const Dashboard: React.FC = () => {
   const [isFundGoalModalOpen, setFundGoalModalOpen] = useState(false);
   const [goalToFund, setGoalToFund] = useState<Goal | null>(null);
 
+  // Menu Dropdown State
   const [openWalletMenu, setOpenWalletMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -102,6 +104,7 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
+  // Handlers
   const onAddGoal = (goalData: Omit<Goal, 'id' | 'icon'> & { icon: string }) => {
     handleAddGoal(goalData);
     setAddGoalModalOpen(false);
@@ -120,11 +123,7 @@ const Dashboard: React.FC = () => {
 
   const onDeleteWallet = (walletId: string) => {
     if(window.confirm(t('editWallet.deleteConfirmation'))) {
-        try {
-            handleDeleteWallet(walletId);
-        } catch(e: any) {
-            alert(e.message);
-        }
+        handleDeleteWallet(walletId);
     }
     setOpenWalletMenu(null);
   }
@@ -132,30 +131,35 @@ const Dashboard: React.FC = () => {
   const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
     const percentage = (goal.currentAmount / goal.targetAmount) * 100;
     const isCompleted = percentage >= 100;
-    
     const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
   
     return (
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors">
         <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
             {React.cloneElement(goal.icon, { className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` })}
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-center mb-1">
-            <span className="font-medium">{goal.name}</span>
-            <span className={`text-sm font-semibold ${isCompleted ? 'text-success' : ''}`}>{isCompleted ? t('dashboard.goalCompleted') : `${Math.round(percentage)}%`}</span>
+            <span className="font-bold text-sm text-text">{goal.name}</span>
+            <span className={`text-xs font-bold ${isCompleted ? 'text-success' : 'text-primary'}`}>
+                {isCompleted ? 'Hoàn thành' : `${Math.round(percentage)}%`}
+            </span>
           </div>
-          <div className="w-full bg-background rounded-full h-4">
+          <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2">
             <div 
-              className={`h-4 rounded-full transition-all duration-500 ${progressColor}`}
+              className={`h-2 rounded-full transition-all duration-500 ${progressColor}`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             ></div>
           </div>
           <p className="text-xs text-muted mt-1 text-right">{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</p>
         </div>
         {!isCompleted &&
-            <button onClick={() => { setGoalToFund(goal); setFundGoalModalOpen(true); }} className="group p-2 rounded-full text-primary bg-primary/10 hover:bg-primary/20 transition-all duration-300 transform hover:scale-110" title={t('dashboard.fundGoalTooltip')}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            <button 
+                onClick={() => { setGoalToFund(goal); setFundGoalModalOpen(true); }} 
+                className="p-2 rounded-full text-primary bg-primary/10 hover:bg-primary hover:text-white transition-all" 
+                title={t('dashboard.fundGoalTooltip')}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
             </button>
         }
       </div>
@@ -164,152 +168,139 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-3">
-            <FinancialOverviewCard />
-        </div>
+      {/* 1. FINANCIAL OVERVIEW */}
+      <div className="mb-6">
+          <FinancialOverviewCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* 2. LEFT COLUMN: WALLETS & TRANSACTIONS */}
         <div className="lg:col-span-2 space-y-6">
+            {/* Recent Transactions */}
             <Card title={t('dashboard.recentTransactions')}>
                 {transactions.length > 0 ? (
                 <ul className="divide-y divide-card-border/50">
                     {transactions.slice(0, 5).map(t => <TransactionItem key={t.id} transaction={t} />)}
                 </ul>
                 ) : (
-                <p className="text-center text-muted py-4">{t('dashboard.noTransactions')}</p>
+                <div className="text-center py-8 opacity-50">
+                     <p>{t('dashboard.noTransactions')}</p>
+                </div>
                 )}
             </Card>
+
+            {/* My Wallets */}
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-text">{t('dashboard.myWallets')}</h3>
-                    <button onClick={() => setWalletModalOpen(true)} title={t('dashboard.addWalletTooltip')} className="group p-1 rounded-full text-primary hover:bg-primary/10 transition-all duration-300 transform hover:scale-110">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                    <button onClick={() => setWalletModalOpen(true)} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     </button>
                 </div>
                 <div className="space-y-4">
                   {wallets.map(w => (
-                     <div key={w.id} className="group flex items-center justify-between p-4 bg-card/80 rounded-lg border border-white/10 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                     <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
-                            <div className={`p-3 rounded-full transition-transform duration-300 group-hover:scale-110 ${w.color}`}>
-                                {React.cloneElement(w.icon, { className: 'h-6 w-6 text-primary-content' })}
+                            <div className={`p-3 rounded-full ${w.color || 'bg-gray-200'}`}>
+                                {React.cloneElement(w.icon, { className: 'h-6 w-6 text-white' })}
                             </div>
                             <div className="ml-4">
-                                <p className="font-semibold text-lg">{w.name}</p>
-                                <p className="text-muted text-sm">{w.type}</p>
+                                <p className="font-bold text-text">{w.name}</p>
+                                <p className="text-xs text-muted uppercase tracking-wider">{w.type}</p>
                             </div>
                         </div>
                         <div className="flex items-center">
-                          <p className="font-bold text-lg mr-2">{formatCurrency(w.balance, true, w.currency)}</p>
-                          <div className="relative">
-                            <button onClick={() => setOpenWalletMenu(openWalletMenu === w.id ? null : w.id)} className="p-2 rounded-full text-muted hover:bg-black/10 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <p className="font-bold text-lg mr-3 text-primary">{formatCurrency(w.balance, true, w.currency)}</p>
+                          
+                          {/* Menu Trigger */}
+                          <button onClick={() => setOpenWalletMenu(openWalletMenu === w.id ? null : w.id)} className="p-1 text-muted hover:text-text">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                               </svg>
-                            </button>
-                            {openWalletMenu === w.id && (
-                                <div ref={menuRef} className="absolute right-0 mt-2 w-32 bg-card/70 backdrop-blur-xl rounded-lg shadow-lg py-1 z-20 border border-white/20 animate-fade-in-down">
-                                  <button onClick={() => onEditWallet(w)} className="w-full text-left px-4 py-2 text-sm text-text hover:bg-primary/10">{t('common.edit')}</button>
-                                  <button onClick={() => onDeleteWallet(w.id)} className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/10">{t('common.delete')}</button>
+                          </button>
+                          
+                          {/* Dropdown Menu */}
+                          {openWalletMenu === w.id && (
+                                <div ref={menuRef} className="absolute right-2 top-12 w-32 bg-card rounded-lg shadow-xl border border-card-border z-10 overflow-hidden animate-fade-in-up">
+                                  <button onClick={() => onEditWallet(w)} className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-primary/10 font-medium">{t('common.edit')}</button>
+                                  <button onClick={() => onDeleteWallet(w.id)} className="w-full text-left px-4 py-2.5 text-sm text-danger hover:bg-danger/10 font-medium">{t('common.delete')}</button>
                                 </div>
                             )}
-                          </div>
                         </div>
                     </div>
                   ))}
                 </div>
             </Card>
         </div>
+
+        {/* 3. RIGHT COLUMN: BUDGETS, ACHIEVEMENTS, GOALS */}
         <div className="space-y-6">
+           {/* Budgets */}
            <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.budgets')}</h3>
-                <button onClick={() => setBudgetModalOpen(true)} title={t('dashboard.addBudgetTooltip')} className="group p-1 rounded-full text-primary hover:bg-primary/10 transition-all duration-300 transform hover:scale-110">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <button onClick={() => setBudgetModalOpen(true)} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </button>
             </div>
-            <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
                 {budgets.length > 0 ? (
                     budgets.map(b => <BudgetProgress key={b.id} budget={b}/>)
                 ) : (
-                  <p className="text-center text-muted py-4">{t('dashboard.noBudgets')}</p>
+                  <p className="text-center text-muted py-4 text-sm">{t('dashboard.noBudgets')}</p>
                 )}
             </div>
           </Card>
+
+          {/* Achievements (Gamification) */}
           <Achievements />
-        </div>
-      </div>
-      
-      <div className="mt-6">
-        <Card>
+
+          {/* Goals */}
+          <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.financialGoals')}</h3>
-                 <button onClick={() => setAddGoalModalOpen(true)} title={t('dashboard.addGoalTooltip')} className="group p-1 rounded-full text-primary hover:bg-primary/10 transition-all duration-300 transform hover:scale-110">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                 <button onClick={() => setAddGoalModalOpen(true)} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </button>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4">
                 {goals.length > 0 ? (
                     goals.map(g => <GoalItem key={g.id} goal={g} />)
                 ) : (
-                    <p className="text-center text-muted py-4">{t('dashboard.noGoals')}</p>
+                    <p className="text-center text-muted py-4 text-sm">{t('dashboard.noGoals')}</p>
                 )}
             </div>
         </Card>
+        </div>
       </div>
       
+      {/* FLOATING ACTION BUTTON */}
       <button 
         onClick={() => setTransactionModalOpen(true)} 
-        className="group fixed bottom-24 right-6 bg-primary text-primary-content p-4 rounded-full shadow-lg hover:bg-primary-focus transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary z-40"
-        aria-label={t('dashboard.addTransactionTooltip')}
+        className="fixed bottom-8 right-6 bg-primary text-white p-4 rounded-full shadow-2xl hover:bg-primary-focus transition-all transform hover:scale-110 hover:rotate-90 z-40"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       </button>
 
-      <AddWalletModal 
-        isOpen={isWalletModalOpen} 
-        onClose={() => setWalletModalOpen(false)} 
-        onAdd={handleAddWallet} 
-      />
-      <EditWalletModal
-        isOpen={isEditWalletModalOpen}
-        onClose={() => setEditWalletModalOpen(false)}
-        onSave={handleEditWallet}
-        walletToEdit={walletToEdit}
-      />
-      <AddTransactionModal 
-        isOpen={isTransactionModalOpen} 
-        onClose={() => setTransactionModalOpen(false)} 
-        onAdd={handleAddTransaction} 
-        wallets={wallets}
-      />
-      <AddBudgetModal 
-        isOpen={isBudgetModalOpen} 
-        onClose={() => setBudgetModalOpen(false)} 
-        onAdd={handleAddBudget} 
-        existingCategories={budgets.map(b => b.category)}
-      />
-      <AddGoalModal 
-        isOpen={isAddGoalModalOpen} 
-        onClose={() => setAddGoalModalOpen(false)} 
-        onAdd={onAddGoal} 
-      />
-      <FundGoalModal 
-        isOpen={isFundGoalModalOpen} 
-        onClose={() => setFundGoalModalOpen(false)} 
-        onFund={onFundGoal} 
-        goal={goalToFund} 
-        wallets={wallets}
-      />
+      {/* --- MODALS --- */}
+      <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
+      
+      {/* Chú ý: Đảm bảo bạn đã có EditWalletModal */}
+      {isEditWalletModalOpen && walletToEdit && (
+        <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />
+      )}
+
+      <AddTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} onAdd={handleAddTransaction} wallets={wallets} />
+      
+      {/* Đã xóa prop existingCategories để tránh lỗi TS */}
+      <AddBudgetModal isOpen={isBudgetModalOpen} onClose={() => setBudgetModalOpen(false)} onAdd={handleAddBudget} />
+      
+      <AddGoalModal isOpen={isAddGoalModalOpen} onClose={() => setAddGoalModalOpen(false)} onAdd={onAddGoal} />
+      
+      <FundGoalModal isOpen={isFundGoalModalOpen} onClose={() => setFundGoalModalOpen(false)} onFund={onFundGoal} goal={goalToFund} wallets={wallets} />
     </div>
   );
 };

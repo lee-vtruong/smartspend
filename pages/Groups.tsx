@@ -1,31 +1,59 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Group, GroupMember, Settlement, GroupTransaction } from '../types';
 import Card from '../components/Card';
 import AddGroupModal from '../components/AddGroupModal';
 import AddGroupTransactionModal from '../components/AddGroupTransactionModal';
+import AddMemberModal from '../components/AddMemberModal'; // <--- Import Modal mới
 import { useAppContext } from '../contexts/AppContext';
+import { apiService } from '../services/apiService';
 
+// Component chi tiết của một nhóm
 const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
-    const { t, language, handleAddGroupTransaction } = useAppContext();
+    const { t, language, handleAddGroupTransaction, fetchInitialData } = useAppContext();
+    
     const [activeTab, setActiveTab] = useState('overview');
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
+    const [isAddMemberModalOpen, setAddMemberModalOpen] = useState(false);
+    
+    // <--- 2. THÊM STATE ĐỂ LƯU GIAO DỊCH CỦA NHÓM NÀY
+    const [transactions, setTransactions] = useState<GroupTransaction[]>([]);
+    const [isLoadingTx, setIsLoadingTx] = useState(false);
 
     const formatGroupCurrency = (amount: number, currency: string) => {
         const locale = language === 'vi' ? 'vi-VN' : 'en-US';
         return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(amount);
     };
+
+    // <--- 3. HÀM TẢI GIAO DỊCH TỪ FIREBASE
+    const loadGroupTransactions = async () => {
+        if (!group?.id) return;
+        setIsLoadingTx(true);
+        try {
+            const data = await apiService.getGroupTransactions(group.id);
+            setTransactions(data as GroupTransaction[]);
+        } catch (error) {
+            console.error("Lỗi tải giao dịch nhóm:", error);
+        } finally {
+            setIsLoadingTx(false);
+        }
+    };
+
+    // <--- 4. GỌI HÀM TẢI KHI MỞ NHÓM
+    useEffect(() => {
+        setActiveTab('overview');
+        loadGroupTransactions(); // Gọi API ngay khi group thay đổi
+    }, [group.id]);
+
     
-    const onAddTransaction = (transactionData: Omit<GroupTransaction, 'id'>) => {
-        handleAddGroupTransaction(group.id, transactionData);
+    const onAddTransaction = async (transactionData: Omit<GroupTransaction, 'id'>) => {
+        // Gọi hàm thêm trong context (để lưu vào DB)
+        await handleAddGroupTransaction(group.id, transactionData);
+        // Sau khi thêm xong, tải lại danh sách ngay lập tức để hiện lên UI
+        await loadGroupTransactions(); 
         setTransactionModalOpen(false);
     };
 
-    useEffect(() => {
-        // Reset to overview tab when group changes
-        setActiveTab('overview');
-    }, [group]);
-
+    // Logic tính toán số dư và các khoản nợ (Split Bill Algorithm)
     const groupData = useMemo(() => {
         if (!group) return null;
 
@@ -35,19 +63,25 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
         let totalContributions = 0;
         let totalExpenses = 0;
 
-        group.transactions.forEach(transaction => {
-        if (transaction.type === 'contribution') {
-            balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
-            totalContributions += transaction.amount;
-        } else if (transaction.type === 'expense') {
-            balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
-            totalExpenses += transaction.amount;
-            
-            const share = transaction.amount / transaction.participants.length;
-            transaction.participants.forEach(pid => {
-            balances.set(pid, (balances.get(pid) || 0) - share);
-            });
-        }
+        // <--- 5. SỬA CHỖ NÀY: Dùng biến 'transactions' (state) thay vì 'group.transactions'
+        transactions.forEach(transaction => {
+            // Loại 1: Đóng quỹ
+            if (transaction.type === 'contribution') {
+                balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
+                totalContributions += transaction.amount;
+            } 
+            // Loại 2: Chi tiêu
+            else if (transaction.type === 'expense') {
+                balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
+                totalExpenses += transaction.amount;
+                
+                if (transaction.participants.length > 0) {
+                    const share = transaction.amount / transaction.participants.length;
+                    transaction.participants.forEach(pid => {
+                        balances.set(pid, (balances.get(pid) || 0) - share);
+                    });
+                }
+            }
         });
 
         const memberBalances = Array.from(balances.entries()).map(([id, balance]) => ({
@@ -55,6 +89,7 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
             balance: balance,
         })).sort((a,b) => b.balance - a.balance);
 
+        // Thuật toán tìm ai trả cho ai (Settlements)
         const settlements: Settlement[] = [];
         const debtors = memberBalances.filter(mb => mb.balance < 0).map(mb => ({...mb, balance: -mb.balance})).sort((a,b) => b.balance - a.balance);
         const creditors = memberBalances.filter(mb => mb.balance > 0).sort((a,b) => b.balance - a.balance);
@@ -84,7 +119,7 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
             memberBalances,
             settlements
         };
-    }, [group]);
+    }, [group, transactions]); // <--- Thêm transactions vào dependency
 
 
     if (!groupData) {
@@ -98,18 +133,34 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
   
     return (
         <div className="flex flex-col flex-1 gap-6">
+            {/* ... (Phần Header giữ nguyên) ... */}
             <Card className="flex flex-col">
-                <div className="p-2">
-                    <div className="flex justify-between items-start mb-6">
+                 <div className="p-2">
+                    {/* Header: Tên nhóm và Nút bấm */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
                             <h3 className="text-3xl font-extrabold text-text tracking-tight uppercase">{group.name}</h3>
                             <p className="text-muted mt-1 font-medium">{group.members.length} thành viên • {group.currency}</p>
                         </div>
-                        <button onClick={() => setTransactionModalOpen(true)} className="group px-5 py-2.5 text-sm font-extrabold text-primary-content bg-primary rounded-xl hover:bg-primary-focus flex items-center transition-all shadow-lg hover:shadow-primary/30 shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                            {t('groups.addTransactionButton')}
-                        </button>
+                        
+                        <div className="flex space-x-3 w-full md:w-auto">
+                            <button 
+                                onClick={() => setAddMemberModalOpen(true)}
+                                className="flex-1 md:flex-none px-4 py-2.5 text-sm font-bold text-primary bg-primary/10 rounded-xl hover:bg-primary/20 flex items-center justify-center transition-all">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" /></svg>
+                                Mời
+                            </button>
+
+                            <button 
+                                onClick={() => setTransactionModalOpen(true)} 
+                                className="flex-1 md:flex-none group px-5 py-2.5 text-sm font-extrabold text-primary-content bg-primary rounded-xl hover:bg-primary-focus flex items-center justify-center transition-all shadow-lg hover:shadow-primary/30">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                {t('groups.addTransactionButton')}
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Thống kê nhanh */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-background/50 p-4 rounded-2xl border border-card-border">
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.totalFund')}</p>
@@ -119,17 +170,20 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.spent')}</p>
                             <p className="text-xl font-bold text-danger">{formatGroupCurrency(totalExpenses, group.currency)}</p>
                         </div>
-                        <div className="bg-background/50 p-4 rounded-2xl border border-card-border flex flex-col justify-center">
+                        
+                        <div 
+                            className="bg-background/50 p-4 rounded-2xl border border-card-border flex flex-col justify-center cursor-pointer hover:bg-background/80 transition-all"
+                            onClick={() => setAddMemberModalOpen(true)}
+                        >
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.members')}</p>
-                            <div className="flex -space-x-2 mt-1">
+                            <div className="flex -space-x-2 mt-1 items-center">
                                 {group.members.slice(0, 5).map(m => (
-                                    <img key={m.id} src={m.avatar} alt={m.name} className="w-8 h-8 rounded-full border-2 border-card ring-2 ring-background shadow-sm" title={m.name}/>
+                                    <img key={m.id} src={m.avatar || "https://ui-avatars.com/api/?name=" + m.name} alt={m.name} className="w-8 h-8 rounded-full border-2 border-card ring-2 ring-background shadow-sm" title={m.name}/>
                                 ))}
-                                {group.members.length > 5 && (
-                                    <div className="w-8 h-8 rounded-full bg-muted text-white text-[10px] flex items-center justify-center font-bold border-2 border-card">+{group.members.length - 5}</div>
-                                )}
+                                {/* ... */}
                             </div>
                         </div>
+
                         <div className="bg-background/50 p-4 rounded-2xl border border-card-border flex flex-col justify-center items-center">
                              <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.currency')}</p>
                              <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-black rounded-lg border border-primary/20">{group.currency}</span>
@@ -137,6 +191,7 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
 
+                {/* Tabs Navigation */}
                 <div className="mt-8 border-b border-card-border">
                     <nav className="flex space-x-8 px-2" aria-label="Tabs">
                         {[
@@ -156,13 +211,15 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                     </nav>
                 </div>
 
+                {/* Tab Content */}
                 <div className="mt-6 flex-1 min-h-[300px]">
+                    {/* TAB 1: TỔNG QUAN */}
                     {activeTab === 'overview' && (
                         <div className="space-y-3">
                             {memberBalances.map(({ member, balance }) => (
                                 <div key={member.id} className="flex justify-between items-center p-4 bg-background/40 hover:bg-background/60 rounded-2xl border border-card-border/50 transition-all">
                                     <div className="flex items-center">
-                                        <img src={member.avatar} alt={member.name} className="w-12 h-12 rounded-full shadow-sm ring-2 ring-white/10"/>
+                                        <img src={member.avatar || "https://ui-avatars.com/api/?name=" + member.name} alt={member.name} className="w-12 h-12 rounded-full shadow-sm ring-2 ring-white/10"/>
                                         <span className="ml-4 font-bold text-text text-lg">{member.name}</span>
                                     </div>
                                     <div className="text-right">
@@ -176,23 +233,27 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     )}
 
+                    {/* TAB 2: GIAO DỊCH (SỬA LẠI BIẾN TRANSACTIONS) */}
                     {activeTab === 'transactions' && (
                         <ul className="divide-y divide-card-border/50">
-                            {group.transactions.length > 0 ? (
-                            group.transactions.slice().sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(transaction => (
+                            {isLoadingTx ? (
+                                <p className="text-center py-4">Đang tải...</p>
+                            ) : transactions.length > 0 ? (
+                                // SỬA: Dùng 'transactions' state
+                                transactions.slice().sort((a,b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).map(transaction => (
                                 <li key={transaction.id} className="py-4 px-2 hover:bg-primary/5 transition-colors rounded-xl mb-1">
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <p className="font-bold text-text text-lg">{transaction.description}</p>
                                             <p className="text-sm text-muted">
-                                                <span className="font-semibold text-primary">{group.members.find(m => m.id === transaction.payerId)?.name}</span> {t('groups.paidSuffix')}
+                                                <span className="font-semibold text-primary">{group.members.find(m => m.id === transaction.payerId)?.name || "Thành viên"}</span> {t('groups.paidSuffix')}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className={`font-black text-lg ${transaction.type === 'contribution' ? 'text-success' : 'text-text'}`}>
                                                 {transaction.type === 'contribution' ? '+' : ''}{formatGroupCurrency(transaction.amount, group.currency)}
                                             </p>
-                                            <p className="text-xs text-muted font-medium">{new Date(transaction.date).toLocaleDateString('vi-VN')}</p>
+                                            <p className="text-xs text-muted font-medium">{new Date(transaction.date || transaction.createdAt).toLocaleDateString('vi-VN')}</p>
                                         </div>
                                     </div>
                                 </li>
@@ -206,9 +267,11 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                         </ul>
                     )}
 
+                    {/* TAB 3: THANH TOÁN (GIỮ NGUYÊN) */}
                     {activeTab === 'settle' && (
                         <div>
-                            <h4 className="font-bold mb-5 text-lg text-text px-2">{t('groups.settleTitle')}</h4>
+                             {/* ... Phần này không đổi, vì nó dùng 'settlements' được tính ở useMemo ... */}
+                             <h4 className="font-bold mb-5 text-lg text-text px-2">{t('groups.settleTitle')}</h4>
                             {settlements.length > 0 ? (
                                 <div className="space-y-4">
                                     {settlements.map((s, i) => (
@@ -244,23 +307,36 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                     )}
                 </div>
             </Card>
+            
+            {/* Modal thêm giao dịch nhóm */}
             <AddGroupTransactionModal
                 isOpen={isTransactionModalOpen}
                 onClose={() => setTransactionModalOpen(false)}
-                onAdd={onAddTransaction}
+                onAdd={onAddTransaction} // GỌI HÀM SỬA ĐỔI
                 group={group}
+            />
+
+            {/* Modal Mời thành viên */}
+            <AddMemberModal
+                isOpen={isAddMemberModalOpen}
+                onClose={() => setAddMemberModalOpen(false)}
+                groupId={group.id}
+                onSuccess={() => {
+                    if (fetchInitialData) fetchInitialData(); 
+                }}
             />
         </div>
     );
 };
 
+// Component trang chính quản lý danh sách nhóm
 const GroupsPage: React.FC = () => {
     const { groups, handleAddGroup, t } = useAppContext();
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
 
     useEffect(() => {
-        // If no group is selected, or the selected group was deleted, select the first one.
+        // Tự động chọn nhóm đầu tiên nếu chưa chọn hoặc nhóm cũ bị xóa
         if ((!selectedGroupId || !groups.find(g => g.id === selectedGroupId)) && groups.length > 0) {
             setSelectedGroupId(groups[0].id);
         } else if (groups.length === 0) {
@@ -272,6 +348,7 @@ const GroupsPage: React.FC = () => {
         return groups.find(g => g.id === selectedGroupId) || null;
     }, [groups, selectedGroupId]);
     
+    // Màn hình Empty State (Chưa có nhóm nào)
     if (groups.length === 0) {
         return (
             <div className="min-h-[70vh] flex flex-col items-center justify-center">
@@ -299,6 +376,7 @@ const GroupsPage: React.FC = () => {
         )
     }
 
+    // Màn hình chính có danh sách nhóm
     return (
         <div className="min-h-[80vh] flex flex-col">
             <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
@@ -317,6 +395,7 @@ const GroupsPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 items-stretch">
+                {/* Sidebar danh sách nhóm */}
                 <div className="lg:col-span-1 h-full">
                     <Card className="h-full flex flex-col !p-0 overflow-hidden bg-card/60">
                         <div className="p-5 border-b border-card-border bg-card/40">
@@ -339,6 +418,8 @@ const GroupsPage: React.FC = () => {
                         </nav>
                     </Card>
                 </div>
+                
+                {/* Nội dung chi tiết nhóm */}
                 <div className="lg:col-span-3 flex flex-col h-full">
                     {selectedGroup ? <GroupDetails group={selectedGroup} /> : 
                     <Card className="flex-1 flex flex-col items-center justify-center text-center py-20 bg-card/60 opacity-50">

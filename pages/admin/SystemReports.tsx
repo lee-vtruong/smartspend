@@ -1,12 +1,12 @@
 import React from 'react';
 import Card from '../../components/Card';
-import { useAppContext } from '../../contexts/AppContext';
-import { MOCK_REVENUE_DATA } from '../../contexts/AppContext';
+import { useAppContext } from '../../contexts/AppContext'; 
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const SystemReports: React.FC = () => {
-    const { systemUsers, theme, t } = useAppContext();
+    const { systemUsers, adminStats, t } = useAppContext();
 
+    // Dữ liệu thật: Đếm số lượng active và locked từ danh sách user tải về
     const userStatusData = [
         { name: t('admin.userManagement.statusActive'), value: systemUsers.filter(u => u.status === 'active').length },
         { name: t('admin.userManagement.statusLocked'), value: systemUsers.filter(u => u.status === 'locked').length },
@@ -15,35 +15,29 @@ const SystemReports: React.FC = () => {
     const COLORS = ['var(--color-success)', 'var(--color-danger)'];
     const revenueColor = 'var(--color-primary)';
 
-    const handleBackup = () => {
-        alert(t('admin.systemReports.backupSuccess'));
-    }
-
+    const handleBackup = () => alert(t('admin.systemReports.backupSuccess'));
     const handleRestore = () => {
-        if (confirm("Are you sure you want to restore? This may overwrite current data.")) {
-            alert(t('admin.systemReports.restoreSuccess'));
-        }
+        if (confirm("Are you sure?")) alert(t('admin.systemReports.restoreSuccess'));
     }
 
     return (
         <div>
             <h2 className="text-3xl font-bold text-text mb-6">{t('admin.systemReports.title')}</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column */}
                 <div className="space-y-8">
                     <Card title={t('admin.systemReports.systemManagement')}>
                         <div className="space-y-4">
-                            <button onClick={handleBackup} className="w-full text-left px-4 py-3 bg-primary/5 hover:bg-primary/10 rounded-md transition-colors font-medium flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-3"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
-                                {t('admin.systemReports.backupButton')}
+                            <button onClick={handleBackup} className="w-full text-left px-4 py-3 bg-primary/5 hover:bg-primary/10 rounded-md font-medium flex items-center">
+                                {/* SVG Icon */} 📥 {t('admin.systemReports.backupButton')}
                             </button>
-                             <button onClick={handleRestore} className="w-full text-left px-4 py-3 bg-primary/5 hover:bg-primary/10 rounded-md transition-colors font-medium flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-3"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                                {t('admin.systemReports.restoreButton')}
+                             <button onClick={handleRestore} className="w-full text-left px-4 py-3 bg-primary/5 hover:bg-primary/10 rounded-md font-medium flex items-center">
+                                {/* SVG Icon */} 📤 {t('admin.systemReports.restoreButton')}
                             </button>
                         </div>
                     </Card>
-                     <Card title={t('admin.systemReports.userStatusReport')}>
+                    
+        
+                    <Card title={t('admin.systemReports.userStatusReport')}>
                         <div style={{ width: '100%', height: 250 }}>
                             <ResponsiveContainer>
                                 <PieChart>
@@ -58,21 +52,37 @@ const SystemReports: React.FC = () => {
                     </Card>
                 </div>
 
-                {/* Right Column */}
                 <div>
                     <Card title={t('admin.systemReports.premiumRevenueReport')}>
                         <div style={{ width: '100%', height: 400 }}>
                             <ResponsiveContainer>
-                                <BarChart data={MOCK_REVENUE_DATA} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <BarChart 
+                                    data={adminStats?.monthlyRevenue || []} 
+                                    margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                                >
                                     <XAxis dataKey="month" tick={{ fill: 'var(--color-muted)' }} />
-                                    <YAxis tick={{ fill: 'var(--color-muted)' }} />
-                                    <Tooltip
-                                        cursor={{fill: 'rgba(128, 128, 128, 0.1)'}}
-                                        contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-primary)' }}
+                                    <YAxis 
+                                        tick={{ fill: 'var(--color-muted)' }} 
+                                        tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact" }).format(value)}
                                     />
-                                    <Bar dataKey="revenue" name={t('admin.systemReports.revenue')} fill={revenueColor} />
+                                    <Tooltip 
+                                        cursor={{fill: 'rgba(128, 128, 128, 0.1)'}} 
+                                        contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-primary)' }}
+                                        formatter={(value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
+                                    />
+                                    <Bar 
+                                        dataKey="revenue" 
+                                        name={t('admin.systemReports.revenue')} 
+                                        fill="var(--color-primary)" 
+                                        barSize={40}  // <--- Thêm dòng này: Cố định độ rộng cột là 40px cho đẹp
+                                        radius={[4, 4, 0, 0]} // (Tùy chọn) Bo tròn đầu cột cho mềm mại
+                                    />
                                 </BarChart>
                             </ResponsiveContainer>
+                            
+                            {(!adminStats?.monthlyRevenue || adminStats.monthlyRevenue.length === 0) && (
+                                <p className="text-center text-muted mt-4">Chưa có dữ liệu giao dịch nào.</p>
+                            )}
                         </div>
                     </Card>
                 </div>

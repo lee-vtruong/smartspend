@@ -1,83 +1,105 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Modal from './Modal';
-import { Budget } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 
 interface AddBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (budget: Omit<Budget, 'id' | 'spent'>) => void;
-  existingCategories: string[];
+  onAdd: (budget: any) => void;
 }
 
-const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose, onAdd, existingCategories }) => {
-  const { t, transactionCategories } = useAppContext();
-  const [category, setCategory] = useState('');
-  const [limit, setLimit] = useState(0);
-
-  const availableCategories = transactionCategories
-    .filter(c => c.type === 'expense' && !existingCategories.includes(c.name));
-
-  useEffect(() => {
-    if (isOpen) {
-      if (availableCategories.length > 0) {
-        setCategory(availableCategories[0].name);
-      } else {
-        setCategory('');
-      }
-      setLimit(0);
-    }
-  }, [isOpen, transactionCategories]); // Rerun when transactionCategories changes
+const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose, onAdd }) => {
+  // 1. LẤY THÊM HÀM t TỪ CONTEXT ĐỂ DỊCH NGÔN NGỮ
+  const { transactionCategories, t } = useAppContext();
+  
+  // State
+  const [category, setCategory] = useState(transactionCategories[0]?.name || '');
+  const [limit, setLimit] = useState<number>(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category || limit <= 0) {
-      alert(t('addBudget.validationError'));
-      return;
+    if (limit <= 0) {
+        alert("Vui lòng nhập hạn mức lớn hơn 0");
+        return;
     }
-    onAdd({ category, limit });
+    
+    onAdd({
+      category,
+      limit: Number(limit),
+      spent: 0,
+    });
+
+    // Reset form
+    setLimit(0);
+    setCategory(transactionCategories[0]?.name || '');
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('addBudget.title')}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="THIẾT LẬP NGÂN SÁCH">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Chọn Danh mục */}
         <div>
-          <label htmlFor="budget-category" className="block text-sm font-medium text-muted">{t('addBudget.categoryLabel')}</label>
-          {availableCategories.length > 0 ? (
-            <select
-              id="budget-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-card border-card-border focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-            >
-              {availableCategories.map(c => <option key={c.name} value={c.name}>{c.isCustom ? c.name : t(c.name)}</option>)}
-            </select>
-          ) : (
-            <p className="mt-1 text-sm text-muted p-2 bg-background rounded-md">{t('addBudget.allCategoriesAssigned')}</p>
-          )}
+          <label className="block text-sm font-bold text-text mb-2">Danh mục chi tiêu</label>
+          <div className="relative">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-background border border-card-border rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 font-medium transition-all"
+              >
+                {transactionCategories
+                    .filter(c => c.type === 'expense')
+                    .map((cat) => (
+                        <option key={cat.name} value={cat.name}>
+                            {/* 2. SỬA LỖI: Dùng hàm t() để dịch category.food -> Ăn uống */}
+                            {t(cat.name)}
+                        </option>
+                ))}
+              </select>
+              {/* Icon mũi tên */}
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-muted">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+          </div>
         </div>
+
+        {/* Hạn mức chi tiêu */}
         <div>
-          <label htmlFor="budget-limit" className="block text-sm font-medium text-muted">{t('addBudget.limitLabel')}</label>
-          <input
-            type="number"
-            id="budget-limit"
-            value={limit}
-            onChange={(e) => setLimit(parseFloat(e.target.value) || 0)}
-            className="mt-1 block w-full px-3 py-2 bg-card border-card-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-            placeholder={t('addBudget.limitPlaceholder')}
-            required
-            min="1"
-          />
+            <label className="block text-sm font-bold text-text mb-2">Hạn mức tháng này</label>
+            <div className="relative bg-background border border-card-border rounded-2xl p-4 flex items-center focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm group hover:border-primary/50">
+                <input
+                    type="number"
+                    value={limit === 0 ? '' : limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className="w-full bg-transparent text-3xl font-black text-primary outline-none placeholder-muted/30"
+                    placeholder="0"
+                    min="0"
+                    autoFocus
+                />
+                <span className="text-sm font-bold text-muted ml-3 uppercase tracking-wider bg-card px-2 py-1 rounded-lg border border-card-border">
+                    VND
+                </span>
+            </div>
+            <p className="text-xs text-muted mt-2 ml-1">
+                ⚠️ Mony sẽ cảnh báo khi bạn tiêu vượt quá 80% số tiền này.
+            </p>
         </div>
-        <div className="flex justify-end pt-4">
-          <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">{t('common.cancel')}</button>
-          <button 
-            type="submit" 
-            className="bg-primary text-primary-content px-4 py-2 rounded-md hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed" 
-            disabled={availableCategories.length === 0 || limit <= 0}
+
+        {/* Footer Buttons */}
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl font-bold text-muted hover:bg-background transition-colors"
           >
-            {t('addBudget.addButton')}
+            Hủy
+          </button>
+          <button
+            type="submit"
+            className="px-8 py-2.5 bg-primary text-primary-content rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-primary-focus transition-all transform active:scale-95"
+          >
+            Lưu ngân sách
           </button>
         </div>
       </form>

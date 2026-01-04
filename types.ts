@@ -102,6 +102,7 @@ export interface GroupTransaction {
   date: string;
   payerId: string; // Member who paid
   participants: string[]; // Members who share the expense
+  createdAt?: string;
 }
 
 export interface Group {
@@ -163,6 +164,7 @@ export interface Notification {
   message: string;
   date: string;
   read: boolean;
+  type?: 'system' | 'personal' | 'general';
 }
 
 export interface TransactionCategory {
@@ -170,4 +172,22 @@ export interface TransactionCategory {
   iconName: string; // The key to look up the icon component, e.g., 'FoodIcon'
   type: 'income' | 'expense';
   isCustom?: boolean;
+}
+
+// Thêm vào cuối file hoặc chỗ thích hợp
+export interface UserSearchResult {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  isAdmin?: boolean;       
+  achievements?: string[]; 
+  status?: 'active' | 'locked';
 }

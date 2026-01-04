@@ -1,0 +1,27 @@
+node_modules
+serviceAccountKey.json
+secrets.txt
+.env
+serviceAccountKey.json
+secrets.txt
+.env
+.env.*
+*.key
+*.pem
+*.json.key
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+.vite/
+.cache/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

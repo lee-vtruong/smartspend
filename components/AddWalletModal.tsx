@@ -71,17 +71,21 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose, onAdd 
         </div>
 
         <div>
-          <label htmlFor="wallet-balance" className="block text-sm font-medium text-muted mb-1">Số dư ban đầu</label>
-          <input
-            type="number"
-            id="wallet-balance"
-            value={balance}
-            onChange={(e) => setBalance(parseFloat(e.target.value))}
-            className="mt-1 block w-full px-4 py-2 bg-background border border-card-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm"
-            placeholder="0"
-            required
-          />
-        </div>
+          <label className="block text-sm font-bold text-text mb-2">Số dư ban đầu</label>
+          <div className="relative bg-background border border-card-border rounded-2xl p-4 flex items-center focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm group hover:border-primary/50">
+              <input
+                  type="number"
+                  value={balance || ''} // Hoặc biến state bạn đang dùng (ví dụ: initialBalance)
+                  onChange={(e) => setBalance(Number(e.target.value))} // Sửa lại tên hàm set state cho đúng với code của bạn
+                  className="w-full bg-transparent text-3xl font-black text-primary outline-none placeholder-muted/30"
+                  placeholder="0"
+                  min="0"
+              />
+              <span className="text-sm font-bold text-muted ml-3 uppercase tracking-wider bg-card px-2 py-1 rounded-lg border border-card-border">
+                  {currency || 'VND'}
+              </span>
+          </div>
+      </div>
          <div>
           <label htmlFor="wallet-currency" className="block text-sm font-medium text-muted mb-1">Loại tiền tệ</label>
           <select

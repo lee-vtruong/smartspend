@@ -1,4 +1,15 @@
-
+import { auth } from "../firebaseClient";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query,     
+  where,    
+  orderBy,  
+  doc
+} from "firebase/firestore";
+import { db } from "../firebaseClient";
 const API_BASE_URL = 'http://localhost:8000/api';
 
 const getHeaders = () => ({
@@ -7,7 +18,7 @@ const getHeaders = () => ({
 });
 
 export const apiService = {
-  // AUTH & PROFILE
+  // AUTH & PROFILEa
   async login(credentials: any) {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -20,14 +31,37 @@ export const apiService = {
     }
     return res.json();
   },
-  async signup(data: any) {
-    const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+
+  // Trong apiService.ts
+
+async signup(name: string, email: string, password: string) {
+    console.log("Check data:", { name, email, password }); 
+
+    const res = await fetch(`${API_BASE_URL}/auth/signup`, { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({ name, email, password }) 
     });
+
+    if (!res.ok) {
+        const text = await res.text();
+        let errorMessage = "Đăng ký thất bại"; 
+
+        try {
+            const data = JSON.parse(text);
+            if (data.message) {
+                errorMessage = data.message; 
+            }
+        } catch (e) {
+            console.error("Server trả về lỗi không phải JSON:", text);
+            errorMessage = "Lỗi kết nối Server hoặc Server gặp sự cố.";
+        }
+
+        throw new Error(errorMessage);
+    }
+
     return res.json();
-  },
+},
   async updateProfile(data: any) {
     const res = await fetch(`${API_BASE_URL}/profile`, {
       method: 'PUT',
@@ -48,9 +82,13 @@ export const apiService = {
     });
     return res.json();
   },
-  async resetPassword(email: string, pass: string) {
-    // Giả lập reset pass
-    return { success: true };
+  async resetPassword(email: string) {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (error: any) {
+      throw new Error(error.message || "Không thể gửi email reset.");
+    }
   },
 
   // DATA EXPORT
@@ -212,8 +250,60 @@ export const apiService = {
     return res.json();
   },
   async addGroupTransaction(groupId: string, data: any) {
-    // API Groups tạm thời chưa hoàn thiện toàn bộ trong mock, nhưng frontend vẫn có thể gọi
-    return { success: true };
+    try {
+        if (!auth.currentUser) throw new Error("Chưa đăng nhập");
+
+        // Firebase hỗ trợ Sub-collection (Collection lồng trong Document)
+        // Đường dẫn sẽ là: groups -> [ID Nhóm] -> transactions -> [ID Giao dịch]
+        const subColRef = collection(db, "groups", groupId, "transactions");
+
+        const newTx = {
+            ...data,
+            createdBy: auth.currentUser.uid, // Người chi tiền (hoặc người nhập)
+            createdAt: new Date().toISOString()
+        };
+
+        const docRef = await addDoc(subColRef, newTx);
+        return { id: docRef.id, ...newTx };
+    } catch (error: any) {
+        console.error("Lỗi thêm giao dịch nhóm:", error);
+        throw error;
+    }
+  },
+
+  // 4. Hàm lấy giao dịch của 1 nhóm cụ thể (Để hiển thị chi tiết)
+  // Lấy danh sách giao dịch trong sub-collection của 1 nhóm
+  async getGroupTransactions(groupId: string) {
+      // Trỏ vào: groups -> [ID] -> transactions
+      const subColRef = collection(db, "groups", groupId, "transactions");
+      // Sắp xếp theo ngày tạo mới nhất
+      const q = query(subColRef, orderBy("createdAt", "desc"));
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+  async searchUserByEmail(email: string) {
+    const res = await fetch(`${API_BASE_URL}/users/search`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ email })
+    });
+    if (res.status === 404) return null; // Không tìm thấy
+    if (!res.ok) throw new Error('Lỗi tìm kiếm');
+    return res.json();
+  },
+
+  async addMemberToGroup(groupId: string, userIdToAdd: string) {
+    const res = await fetch(`${API_BASE_URL}/groups/${groupId}/add-member`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ userIdToAdd })
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi thêm thành viên');
+    }
+    return res.json();
   },
 
   // CATEGORIES
@@ -251,13 +341,19 @@ export const apiService = {
     });
   },
   async sendNotification(data: any) {
-    const res = await fetch(`${API_BASE_URL}/notifications`, {
+    const res = await fetch(`${API_BASE_URL}/admin/broadcast`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
+    
+    if (!res.ok) {
+       const err = await res.json();
+       throw new Error(err.message || "Gửi thất bại");
+    }
+    
     return res.json();
-  },
+},
 
   // ADMIN
   async adminGetUsers() {
@@ -272,6 +368,27 @@ export const apiService = {
     return res.json();
   },
 
+  async adminGetStats() {
+    const res = await fetch(`${API_BASE_URL}/admin/stats`, { headers: getHeaders() });
+    if (!res.ok) throw new Error("Lỗi lấy thống kê");
+    return res.json();
+  },
+
+  async adminBroadcastNotification(title: string, message: string) {
+    const res = await fetch(`${API_BASE_URL}/admin/broadcast`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ title, message })
+    });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Gửi thất bại");
+    }
+    
+    return res.json();
+  },
+
   // AI
   // async chatWithAI(message: string, context: any) {
   //   const res = await fetch(`${API_BASE_URL}/ai/chat`, {
@@ -283,27 +400,59 @@ export const apiService = {
   // }
 
   // AI Chat
-async chatWithAI(message: string, context: any) {
-  console.log("Calling AI chat endpoint with message:", message);
-  
-  const res = await fetch(`${API_BASE_URL}/ai/chat`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ 
-      message, 
-      context,
-      timestamp: new Date().toISOString() 
-    })
-  });
-  
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("AI Chat error:", res.status, errorText);
-    throw new Error(`AI Chat failed: ${res.status} - ${errorText}`);
+  async chatWithAI(message: string, context: any) {
+    console.log("Calling AI chat endpoint with message:", message);
+    
+    const res = await fetch(`${API_BASE_URL}/ai/chat`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ 
+        message, 
+        context,
+        timestamp: new Date().toISOString() 
+      })
+    });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("AI Chat error:", res.status, errorText);
+      throw new Error(`AI Chat failed: ${res.status} - ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log("AI response received:", data);
+    return data;
+  },
+
+  // AI premium
+  async getAIAnalysis() {
+    const res = await fetch(`${API_BASE_URL}/ai/analysis`, { headers: getHeaders() });
+    if (!res.ok) throw new Error("Lỗi phân tích AI");
+    return res.json();
+  },
+  async loginWithGoogle(idToken: string) {
+    const res = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+    });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Lỗi đăng nhập Google");
+    }
+    return res.json();
+  },
+
+  async setPassword(newPassword: string) {
+      const res = await fetch(`${API_BASE_URL}/auth/set-password`, {
+          method: 'POST',
+          headers: getHeaders(), // Cần token để biết đang đổi pass cho ai
+          body: JSON.stringify({ newPassword })
+      });
+
+      if (!res.ok) throw new Error("Lỗi đặt mật khẩu");
+      return res.json();
   }
-  
-  const data = await res.json();
-  console.log("AI response received:", data);
-  return data;
-}
 };
+
