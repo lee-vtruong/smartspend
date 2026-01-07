@@ -1,6 +1,7 @@
-
 import React from 'react';
-import { Wallet, Transaction, Budget, SpendingData, CategorySpending, Group, Goal, Achievement, DebtLoanItem, CurrencyCode, TransactionCategory } from './types';
+import { CurrencyCode, TransactionCategory } from './types';
+
+// --- ICONS ---
 
 export const CashIcon: React.FC<{className?: string}> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -139,6 +140,13 @@ export const GoalIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
+export const DefaultIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+         <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z" />
+    </svg>
+);
+
 export const iconMap: { [key: string]: React.FC<{className?: string}> } = {
     CashIcon,
     BankIcon,
@@ -162,53 +170,11 @@ export const iconMap: { [key: string]: React.FC<{className?: string}> } = {
     FirstTransactionIcon,
     BudgetIcon,
     GoalIcon,
+    DefaultIcon,
 };
 export const ALL_ICONS = Object.keys(iconMap);
 
-
-export const MOCK_WALLETS: Wallet[] = [
-  { id: 'w1', name: 'Tiền mặt', type: 'Cash', balance: 2500000, currency: 'VND', color: 'bg-success', icon: <CashIcon className="w-8 h-8"/> },
-  { id: 'w2', name: 'Techcombank', type: 'Bank', balance: 15750000, currency: 'VND', color: 'bg-primary', icon: <BankIcon className="w-8 h-8"/> },
-  { id: 'w3', name: 'Momo', type: 'E-Wallet', balance: 1230000, currency: 'VND', color: 'bg-accent', icon: <EWalletIcon className="w-8 h-8"/> },
-];
-
-export const MOCK_TRANSACTIONS: Transaction[] = [
-  { id: 't6', type: 'expense', amount: 75000, category: 'category.beverage', date: '2024-07-30', wallet: 'Momo', payee: 'Starbucks', icon: <CoffeeIcon className="w-6 h-6"/> },
-  { id: 't1', type: 'expense', amount: 55000, category: 'category.food', date: '2024-07-29', wallet: 'Tiền mặt', payee: 'Cơm tấm Cali', icon: <FoodIcon className="w-6 h-6"/> },
-  { id: 't2', type: 'expense', amount: 350000, category: 'category.shopping', date: '2024-07-29', wallet: 'Techcombank', payee: 'Uniqlo', icon: <ShoppingIcon className="w-6 h-6"/>},
-  { id: 't3', type: 'income', amount: 20000000, category: 'category.salary', date: '2024-07-28', wallet: 'Techcombank', payee: 'Công ty ABC', icon: <SalaryIcon className="w-6 h-6"/>},
-  { id: 't4', type: 'expense', amount: 150000, category: 'category.transport', date: '2024-07-27', wallet: 'Momo', payee: 'Grab', icon: <TransportIcon className="w-6 h-6"/> },
-  { id: 't5', type: 'expense', amount: 1200000, category: 'category.shopping', date: '2024-07-26', wallet: 'Techcombank', payee: 'Shopee', icon: <ShoppingIcon className="w-6 h-6"/>},
-];
-
-export const MOCK_BUDGETS: Budget[] = [
-    { id: 'b1', category: 'category.food', limit: 5000000, spent: 3750000 },
-    { id: 'b2', category: 'category.shopping', limit: 3000000, spent: 2850000 },
-    { id: 'b3', category: 'category.transport', limit: 1000000, spent: 450000 },
-]
-
-export const MOCK_GOALS: Goal[] = [
-    { id: 'goal1', name: 'Mua MacBook Pro', targetAmount: 50000000, currentAmount: 15000000, icon: <LaptopIcon className="w-8 h-8" /> },
-    { id: 'goal2', name: 'Du lịch Nhật Bản', targetAmount: 70000000, currentAmount: 25000000, icon: <AirplaneIcon className="w-8 h-8" /> },
-    { id: 'goal3', name: 'Quỹ khẩn cấp', targetAmount: 30000000, currentAmount: 29500000, icon: <EmergencyFundIcon className="w-8 h-8" /> },
-];
-
-export const MOCK_SPENDING_DATA: SpendingData[] = [
-    { period: 'Feb', expense: 12000, income: 15000 },
-    { period: 'Mar', expense: 14000, income: 16000 },
-    { period: 'Apr', expense: 13500, income: 15500 },
-    { period: 'May', expense: 15000, income: 18000 },
-    { period: 'Jun', expense: 16000, income: 17000 },
-    { period: 'Jul', expense: 14500, income: 17500 },
-];
-
-export const MOCK_CATEGORY_SPENDING: CategorySpending[] = [
-    { name: 'Ăn uống', value: 450 },
-    { name: 'Mua sắm', value: 300 },
-    { name: 'Di chuyển', value: 150 },
-    { name: 'Giải trí', value: 100 },
-    { name: 'Khác', value: 50 },
-];
+// --- CONFIG CONSTANTS ---
 
 export const INITIAL_TRANSACTION_CATEGORIES: TransactionCategory[] = [
     { name: 'category.food', iconName: 'FoodIcon', type: 'expense' },
@@ -230,46 +196,6 @@ export const INITIAL_TRANSACTION_CATEGORIES: TransactionCategory[] = [
 ];
 
 export const WALLET_COLORS = ['bg-rainbow-red', 'bg-rainbow-orange', 'bg-rainbow-yellow', 'bg-rainbow-green', 'bg-rainbow-blue', 'bg-rainbow-violet'];
-
-
-export const MOCK_GROUPS: Group[] = [
-    {
-        id: 'group1',
-        name: 'Quỹ du lịch Đà Lạt',
-        currency: 'VND',
-        members: [
-            { id: 'm1', name: 'An', avatar: 'https://picsum.photos/seed/m1/100' },
-            { id: 'm2', name: 'Bình', avatar: 'https://picsum.photos/seed/m2/100' },
-            { id: 'm3', name: 'Chi', avatar: 'https://picsum.photos/seed/m3/100' },
-            { id: 'm4', name: 'Dũng', avatar: 'https://picsum.photos/seed/m4/100' },
-        ],
-        transactions: [
-            { id: 'gt1', type: 'contribution', description: 'An nộp tiền', amount: 1000000, date: '2024-07-20', payerId: 'm1', participants: ['m1'] },
-            { id: 'gt2', type: 'contribution', description: 'Bình nộp tiền', amount: 1000000, date: '2024-07-20', payerId: 'm2', participants: ['m2'] },
-            { id: 'gt3', type: 'contribution', description: 'Chi nộp tiền', amount: 1000000, date: '2024-07-20', payerId: 'm3', participants: ['m3'] },
-            { id: 'gt4', type: 'contribution', description: 'Dũng nộp tiền', amount: 1000000, date: '2024-07-20', payerId: 'm4', participants: ['m4'] },
-            { id: 'gt5', type: 'expense', description: 'Tiền khách sạn', amount: 2000000, date: '2024-07-21', payerId: 'm1', participants: ['m1', 'm2', 'm3', 'm4'] },
-            { id: 'gt6', type: 'expense', description: 'Ăn tối lẩu bò', amount: 800000, date: '2024-07-21', payerId: 'm2', participants: ['m1', 'm2', 'm3', 'm4'] },
-            { id: 'gt7', type: 'expense', description: 'Vé cáp treo', amount: 300000, date: '2024-07-22', payerId: 'm3', participants: ['m3', 'm4'] },
-            { id: 'gt8', type: 'expense', description: 'Cà phê', amount: 160000, date: '2024-07-22', payerId: 'm4', participants: ['m1', 'm2', 'm3', 'm4'] },
-        ]
-    }
-];
-
-export const MOCK_ACHIEVEMENTS: Achievement[] = [
-    { id: 'ach1', titleKey: 'achievement.firstTransaction.title', descriptionKey: 'achievement.firstTransaction.description', icon: <FirstTransactionIcon />, unlocked: false, unlockedDate: null },
-    { id: 'ach2', titleKey: 'achievement.firstBudget.title', descriptionKey: 'achievement.firstBudget.description', icon: <BudgetIcon />, unlocked: false, unlockedDate: null },
-    { id: 'ach3', titleKey: 'achievement.firstGoal.title', descriptionKey: 'achievement.firstGoal.description', icon: <GoalIcon />, unlocked: false, unlockedDate: null },
-    { id: 'ach4', titleKey: 'achievement.goalMaster.title', descriptionKey: 'achievement.goalMaster.description', icon: <TrophyIcon />, unlocked: false, unlockedDate: null },
-    { id: 'ach5', titleKey: 'achievement.investor.title', descriptionKey: 'achievement.investor.description', icon: <PiggyBankIcon />, unlocked: false, unlockedDate: null },
-    { id: 'ach6', titleKey: 'achievement.socializer.title', descriptionKey: 'achievement.socializer.description', icon: <HandshakeIcon />, unlocked: false, unlockedDate: null },
-];
-
-export const MOCK_DEBTS_LOANS: DebtLoanItem[] = [
-  { id: 'dl1', type: 'debt', person: 'Minh Anh', initialAmount: 5000000, paidAmount: 1000000, description: 'Vay tiền mua điện thoại', dueDate: '2024-12-31' },
-  { id: 'dl2', type: 'loan', person: 'Bảo', initialAmount: 2000000, paidAmount: 500000, description: 'Cho vay tiền đóng học phí', dueDate: '2024-09-30' },
-  { id: 'dl3', type: 'debt', person: 'Ngân hàng VCB', initialAmount: 20000000, paidAmount: 15000000, description: 'Trả góp xe máy', dueDate: '2025-06-30' },
-];
 
 export const SUPPORTED_CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'JPY', 'KRW'];
 
