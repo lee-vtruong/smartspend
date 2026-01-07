@@ -11,34 +11,40 @@ import Achievements from '../components/Achievements';
 import EditWalletModal from '../components/EditWalletModal';
 import { useAppContext } from '../contexts/AppContext';
 
-// --- 1. IMPORT ICONS ---
-import { LaptopIcon, AirplaneIcon, EmergencyFundIcon, DefaultIcon } from '../constants';
+// --- 1. IMPORT ICONS TỪ CONSTANTS ---
+import { LaptopIcon, AirplaneIcon, EmergencyFundIcon } from '../constants';
 
-// --- 2. TẠO ICON DỰ PHÒNG CỤC BỘ (QUAN TRỌNG) ---
-// Nếu import bị lỗi, icon này sẽ hiện ra thay thế để tránh trắng màn hình
-const SafeIcon: React.FC<{className?: string}> = ({ className }) => (
-    <div className={`rounded-full bg-gray-400 ${className}`} style={{ minWidth: '24px', minHeight: '24px' }} />
+// --- 2. TẠO ICON CỨU HỘ (Định nghĩa ngay tại đây để không bao giờ bị undefined) ---
+const RescueIcon: React.FC<{className?: string}> = ({ className }) => (
+    <div className={`flex items-center justify-center rounded-full bg-gray-200 text-gray-500 font-bold text-xs ${className}`} style={{ width: '24px', height: '24px' }}>
+        ?
+    </div>
 );
 
-// --- 3. ĐỊNH NGHĨA MAP AN TOÀN ---
+// --- 3. BẢNG ÁNH XẠ ICON ---
+// Sử dụng 'any' để tránh lỗi TypeScript khắt khe
 const GOAL_ICON_MAP: Record<string, any> = {
     'Laptop': LaptopIcon,
     'Airplane': AirplaneIcon,
     'Emergency': EmergencyFundIcon,
-    'Default': DefaultIcon,
 };
 
 // --- SUB-COMPONENTS ---
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
   const { t, formatCurrency } = useAppContext();
+  
+  // Logic render icon an toàn cho Transaction
+  let IconDisplay = <RescueIcon className="h-6 w-6" />;
+  if (React.isValidElement(transaction.icon)) {
+      // Ép kiểu an toàn
+      IconDisplay = React.cloneElement(transaction.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-primary' });
+  }
+
   return (
     <li className="flex items-center justify-between py-3 group hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition-colors">
       <div className="flex items-center">
         <div className="p-2 bg-background rounded-full border border-card-border">
-          {React.isValidElement(transaction.icon) 
-            ? React.cloneElement(transaction.icon as React.ReactElement<{ className?: string }>, { className: 'h-6 w-6 text-primary' })
-            : <DefaultIcon className="h-6 w-6" /> 
-          }
+          {IconDisplay}
         </div>
         <div className="ml-4">
           <p className="font-medium text-text">{transaction.payee}</p>
@@ -81,14 +87,6 @@ const BudgetProgress: React.FC<{ budget: Budget }> = ({ budget }) => {
 
 // --- MAIN DASHBOARD ---
 const Dashboard: React.FC = () => {
-  console.log('=== DASHBOARD DEBUG ===');
-  console.log('1. Icon imports:', {
-    LaptopIcon: !!LaptopIcon,
-    AirplaneIcon: !!AirplaneIcon,
-    EmergencyFundIcon: !!EmergencyFundIcon,
-    DefaultIcon: !!DefaultIcon
-  });
-
   const { 
     wallets, transactions, budgets, goals, 
     handleAddWallet, handleEditWallet, handleDeleteWallet,
@@ -146,38 +144,43 @@ const Dashboard: React.FC = () => {
     setOpenWalletMenu(null);
   }
   
-  // --- GOAL ITEM (FIXED) ---
+  // --- 4. GOAL ITEM (PHIÊN BẢN CHỐNG SẬP TUYỆT ĐỐI) ---
   const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
     const percentage = (goal.currentAmount / goal.targetAmount) * 100;
     const isCompleted = percentage >= 100;
     const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
     
-    // 1. Xác định Icon cần vẽ
-    // Mặc định dùng SafeIcon (không bao giờ lỗi)
-    let IconToRender: any = DefaultIcon; 
+    // --- LOGIC XỬ LÝ ICON ---
+    // Mặc định dùng RescueIcon (Icon Cứu hộ)
+    let RenderedIcon = <RescueIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
 
-    // Nếu import thành công, ưu tiên dùng LaptopIcon
-    if (LaptopIcon) IconToRender = LaptopIcon;
-
-    if (typeof goal.icon === 'string') {
-        // Nếu tìm thấy trong Map và Component đó tồn tại (không undefined)
-        if (GOAL_ICON_MAP && GOAL_ICON_MAP[goal.icon]) {
-            IconToRender = GOAL_ICON_MAP[goal.icon];
+    try {
+        if (typeof goal.icon === 'string') {
+            // Tìm trong Map
+            const MappedIcon = GOAL_ICON_MAP[goal.icon];
+            // Quan trọng: Kiểm tra xem kết quả map có phải là một hàm/component hợp lệ không
+            if (MappedIcon && typeof MappedIcon === 'function') {
+                const IconComponent = MappedIcon;
+                RenderedIcon = <IconComponent className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
+            } else {
+                console.warn("Icon not found or invalid in Map:", goal.icon);
+                // Giữ nguyên RescueIcon
+            }
+        } else if (React.isValidElement(goal.icon)) {
+            // Logic cũ cho dữ liệu cũ
+            RenderedIcon = React.cloneElement(goal.icon as React.ReactElement<any>, { 
+                className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` 
+            });
         }
-    } else if (React.isValidElement(goal.icon)) {
-        IconToRender = null; // Sẽ render bằng cloneElement bên dưới
+    } catch (err) {
+        console.error("Error rendering icon for goal:", goal.name, err);
+        // Nếu lỗi, RescueIcon sẽ được hiển thị
     }
 
     return (
       <div className="flex items-center space-x-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors">
         <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
-            {IconToRender ? (
-                <IconToRender className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
-            ) : (
-                React.isValidElement(goal.icon) 
-                    ? React.cloneElement(goal.icon as React.ReactElement<{ className?: string }>, { className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` })
-                    : <DefaultIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
-            )}
+            {RenderedIcon}
         </div>
         
         <div className="flex-1">
@@ -241,14 +244,18 @@ const Dashboard: React.FC = () => {
                     </button>
                 </div>
                 <div className="space-y-4">
-                  {wallets.map(w => (
+                  {wallets.map(w => {
+                     // Logic render icon an toàn cho Wallet
+                     let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
+                     if (React.isValidElement(w.icon)) {
+                         WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
+                     }
+
+                     return (
                      <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
                             <div className={`p-3 rounded-full ${w.color || 'bg-gray-200'}`}>
-                                {React.isValidElement(w.icon) 
-                                    ? React.cloneElement(w.icon as React.ReactElement<{ className?: string }>, { className: 'h-6 w-6 text-white' })
-                                    : (LaptopIcon ? <LaptopIcon className="h-6 w-6 text-white" /> : <SafeIcon className="h-6 w-6" />)
-                                }
+                                {WalletIcon}
                             </div>
                             <div className="ml-4">
                                 <p className="font-bold text-text">{w.name}</p>
@@ -272,7 +279,7 @@ const Dashboard: React.FC = () => {
                             )}
                         </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
             </Card>
         </div>
