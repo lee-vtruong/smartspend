@@ -2,7 +2,7 @@
 // FIX: Import React to make the JSX namespace available for types like React.JSX.Element.
 import React from 'react';
 
-export type Page = 'dashboard' | 'reports' | 'transactions' | 'groups' | 'premium' | 'settings' | 'debts' | 'adminDashboard' | 'userManagement' | 'systemReports' | 'notificationsManagement';
+export type Page = 'dashboard' | 'reports' | 'transactions' | 'groups' | 'premium' | 'settings' | 'debts' | 'adminDashboard' | 'userManagement' | 'systemReports' | 'notificationsManagement' | 'createPassword';
 export type Language = 'vi' | 'en';
 export type CurrencyCode = 'VND' | 'USD' | 'EUR' | 'JPY' | 'KRW';
 
@@ -142,9 +142,13 @@ export interface Achievement {
 
 
 // AI Chatbot Types
+// src/types.ts
+
 export interface ChatMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
+  role: 'user' | 'assistant' | 'model'; 
+  content?: string;       
+  parts?: { text: string }[];
+  timestamp?: Date;
 }
 
 

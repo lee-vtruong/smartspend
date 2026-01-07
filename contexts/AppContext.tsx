@@ -316,6 +316,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         localStorage.setItem('smartspend_user', JSON.stringify(data.user));
         setUser(data.user);
         setIsAuthenticated(true);
+
+        if (!data.user.hasPassword) {
+            window.history.pushState({}, '', '/create-password');
+            setCurrentPage('createPassword');
+        } else {
+            window.history.pushState({}, '', '/');
+            setCurrentPage('dashboard');
+        }
+
         return data;
       }
     } catch (error: any) {
@@ -331,6 +340,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       await apiService.setPassword(newPassword);
       showToast("Tạo mật khẩu thành công!", "success");
+      
+      const updatedUser = { ...user, hasPassword: true };
+      setUser(updatedUser);
+      localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
+
+      window.history.pushState({}, '', '/');
+      setCurrentPage('dashboard');
+
     } catch (error: any) {
       showToast(error.message || "Không thể tạo mật khẩu", "error");
       throw error;
