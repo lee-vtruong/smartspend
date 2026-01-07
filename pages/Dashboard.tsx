@@ -7,9 +7,20 @@ import AddBudgetModal from '../components/AddBudgetModal';
 import AddGoalModal from '../components/AddGoalModal';
 import FundGoalModal from '../components/FundGoalModal';
 import FinancialOverviewCard from '../components/FinancialOverviewCard';
-import Achievements from '../components/Achievements'; // Đã có file này ở bước 1
-import EditWalletModal from '../components/EditWalletModal'; // Đảm bảo bạn đã có file này
+import Achievements from '../components/Achievements';
+import EditWalletModal from '../components/EditWalletModal';
 import { useAppContext } from '../contexts/AppContext';
+
+// --- 1. IMPORT ICONS ---
+import { LaptopIcon, AirplaneIcon, EmergencyFundIcon } from '../constants';
+
+// --- 2. ĐỊNH NGHĨA MAP VỚI KIỂU CỤ THỂ ĐỂ TRÁNH LỖI CLASSNAME ---
+// Ép kiểu icon là Component nhận className string
+const GOAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+    'Laptop': LaptopIcon as React.ComponentType<{ className?: string }>,
+    'Airplane': AirplaneIcon as React.ComponentType<{ className?: string }>,
+    'Emergency': EmergencyFundIcon as React.ComponentType<{ className?: string }>,
+};
 
 // --- SUB-COMPONENTS ---
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
@@ -18,7 +29,11 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
     <li className="flex items-center justify-between py-3 group hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition-colors">
       <div className="flex items-center">
         <div className="p-2 bg-background rounded-full border border-card-border">
-          {React.cloneElement(transaction.icon, { className: 'h-6 w-6 text-primary' })}
+          {/* FIX LỖI TS(2769): Ép kiểu rõ ràng cho ReactElement */}
+          {React.isValidElement(transaction.icon) 
+            ? React.cloneElement(transaction.icon as React.ReactElement<{ className?: string }>, { className: 'h-6 w-6 text-primary' })
+            : <LaptopIcon className="h-6 w-6 text-primary" /> 
+          }
         </div>
         <div className="ml-4">
           <p className="font-medium text-text">{transaction.payee}</p>
@@ -62,19 +77,10 @@ const BudgetProgress: React.FC<{ budget: Budget }> = ({ budget }) => {
 // --- MAIN DASHBOARD ---
 const Dashboard: React.FC = () => {
   const { 
-    wallets, 
-    transactions, 
-    budgets, 
-    goals, 
-    handleAddWallet,
-    handleEditWallet,
-    handleDeleteWallet,
-    handleAddTransaction, 
-    handleAddBudget, 
-    handleAddGoal, 
-    handleFundGoal,
-    t,
-    formatCurrency
+    wallets, transactions, budgets, goals, 
+    handleAddWallet, handleEditWallet, handleDeleteWallet,
+    handleAddTransaction, handleAddBudget, handleAddGoal, handleFundGoal,
+    t, formatCurrency
   } = useAppContext();
   
   // Modal States
@@ -91,7 +97,6 @@ const Dashboard: React.FC = () => {
   const [openWalletMenu, setOpenWalletMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -128,15 +133,35 @@ const Dashboard: React.FC = () => {
     setOpenWalletMenu(null);
   }
   
+  // --- 3. FIX LỖI GOAL ITEM VỚI TYPE CASTING ---
   const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
     const percentage = (goal.currentAmount / goal.targetAmount) * 100;
     const isCompleted = percentage >= 100;
     const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
-  
+    
+    // Mặc định là LaptopIcon, ép kiểu về ComponentType có className
+    let IconComponent = LaptopIcon as React.ComponentType<{ className?: string }>; 
+    let isStringIcon = false;
+
+    if (typeof goal.icon === 'string') {
+        isStringIcon = true;
+        if (GOAL_ICON_MAP[goal.icon]) {
+            IconComponent = GOAL_ICON_MAP[goal.icon];
+        }
+    }
+
     return (
       <div className="flex items-center space-x-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors">
         <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
-            {React.cloneElement(goal.icon, { className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` })}
+            {isStringIcon ? (
+                // Render component từ Map
+                <IconComponent className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
+            ) : (
+                // Render Element cũ (dùng cloneElement với ép kiểu)
+                React.isValidElement(goal.icon) 
+                    ? React.cloneElement(goal.icon as React.ReactElement<{ className?: string }>, { className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` })
+                    : <LaptopIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
+            )}
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-center mb-1">
@@ -203,7 +228,11 @@ const Dashboard: React.FC = () => {
                      <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
                             <div className={`p-3 rounded-full ${w.color || 'bg-gray-200'}`}>
-                                {React.cloneElement(w.icon, { className: 'h-6 w-6 text-white' })}
+                                {/* FIX LỖI TS(2769): Ép kiểu rõ ràng cho icon của Wallet */}
+                                {React.isValidElement(w.icon) 
+                                    ? React.cloneElement(w.icon as React.ReactElement<{ className?: string }>, { className: 'h-6 w-6 text-white' })
+                                    : <LaptopIcon className="h-6 w-6 text-white" />
+                                }
                             </div>
                             <div className="ml-4">
                                 <p className="font-bold text-text">{w.name}</p>
@@ -213,14 +242,12 @@ const Dashboard: React.FC = () => {
                         <div className="flex items-center">
                           <p className="font-bold text-lg mr-3 text-primary">{formatCurrency(w.balance, true, w.currency)}</p>
                           
-                          {/* Menu Trigger */}
                           <button onClick={() => setOpenWalletMenu(openWalletMenu === w.id ? null : w.id)} className="p-1 text-muted hover:text-text">
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                               </svg>
                           </button>
                           
-                          {/* Dropdown Menu */}
                           {openWalletMenu === w.id && (
                                 <div ref={menuRef} className="absolute right-2 top-12 w-32 bg-card rounded-lg shadow-xl border border-card-border z-10 overflow-hidden animate-fade-in-up">
                                   <button onClick={() => onEditWallet(w)} className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-primary/10 font-medium">{t('common.edit')}</button>
@@ -234,7 +261,7 @@ const Dashboard: React.FC = () => {
             </Card>
         </div>
 
-        {/* 3. RIGHT COLUMN: BUDGETS, ACHIEVEMENTS, GOALS */}
+        {/* 3. RIGHT COLUMN */}
         <div className="space-y-6">
            {/* Budgets */}
            <Card>
@@ -253,7 +280,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          {/* Achievements (Gamification) */}
+          {/* Achievements */}
           <Achievements />
 
           {/* Goals */}
@@ -275,7 +302,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* FLOATING ACTION BUTTON */}
+      {/* FAB */}
       <button 
         onClick={() => setTransactionModalOpen(true)} 
         className="fixed bottom-8 right-6 bg-primary text-white p-4 rounded-full shadow-2xl hover:bg-primary-focus transition-all transform hover:scale-110 hover:rotate-90 z-40"
@@ -285,21 +312,14 @@ const Dashboard: React.FC = () => {
         </svg>
       </button>
 
-      {/* --- MODALS --- */}
+      {/* MODALS */}
       <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
-      
-      {/* Chú ý: Đảm bảo bạn đã có EditWalletModal */}
       {isEditWalletModalOpen && walletToEdit && (
         <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />
       )}
-
       <AddTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} onAdd={handleAddTransaction} wallets={wallets} />
-      
-      {/* Đã xóa prop existingCategories để tránh lỗi TS */}
       <AddBudgetModal isOpen={isBudgetModalOpen} onClose={() => setBudgetModalOpen(false)} onAdd={handleAddBudget} />
-      
       <AddGoalModal isOpen={isAddGoalModalOpen} onClose={() => setAddGoalModalOpen(false)} onAdd={onAddGoal} />
-      
       <FundGoalModal isOpen={isFundGoalModalOpen} onClose={() => setFundGoalModalOpen(false)} onFund={onFundGoal} goal={goalToFund} wallets={wallets} />
     </div>
   );
