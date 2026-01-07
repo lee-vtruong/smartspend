@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import { Goal } from '../types';
-import { LaptopIcon, AirplaneIcon, EmergencyFundIcon } from '../constants';
+import { LaptopIcon, AirplaneIcon, EmergencyFundIcon, DefaultIcon } from '../constants';
 
 interface AddGoalModalProps {
   isOpen: boolean;
@@ -9,14 +9,39 @@ interface AddGoalModalProps {
   onAdd: (goal: Omit<Goal, 'id' | 'icon'> & { icon: string }) => void;
 }
 
+const getSafeIcon = (iconName: string) => {
+  const iconMap = {
+    'Laptop': LaptopIcon || DefaultIcon,
+    'Airplane': AirplaneIcon || DefaultIcon,
+    'Emergency': EmergencyFundIcon || DefaultIcon,
+    'Default': DefaultIcon
+  };
+  
+  return iconMap[iconName as keyof typeof iconMap] || DefaultIcon;
+};
+
 const SafeIcon: React.FC<{className?: string}> = ({ className }) => (
     <div className={`rounded-full bg-gray-400 ${className}`} style={{ minWidth: '24px', minHeight: '24px' }} />
 );
 
+// AddGoalModal.tsx - SỬA phần goalIcons
+
 const goalIcons = [
-    { name: 'Laptop', icon: LaptopIcon ? <LaptopIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
-    { name: 'Airplane', icon: AirplaneIcon ? <AirplaneIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
-    { name: 'Emergency', icon: EmergencyFundIcon ? <EmergencyFundIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
+    { 
+        name: 'Laptop', 
+        iconComponent: LaptopIcon || DefaultIcon,
+        displayName: 'Laptop'
+    },
+    { 
+        name: 'Airplane', 
+        iconComponent: AirplaneIcon || DefaultIcon,
+        displayName: 'Máy bay'
+    },
+    { 
+        name: 'Emergency', 
+        iconComponent: EmergencyFundIcon || DefaultIcon,
+        displayName: 'Khẩn cấp'
+    },
 ];
 
 const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onAdd }) => {
@@ -88,17 +113,21 @@ const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onAdd }) =
         <div>
             <label className="block text-sm font-medium text-muted">Chọn biểu tượng</label>
             <div className="mt-2 flex space-x-2">
-                {goalIcons.map(iconInfo => (
-                    <button
-                        type="button"
-                        key={iconInfo.name}
-                        onClick={() => setSelectedIcon(iconInfo.name)}
-                        className={`p-3 rounded-lg border-2 ${selectedIcon === iconInfo.name ? 'border-primary bg-primary/10' : 'border-card-border bg-background'}`}
-                    >
-                        {iconInfo.icon}
-                    </button>
-                ))}
-            </div>
+              {goalIcons.map(iconInfo => {
+                  const IconComponent = iconInfo.iconComponent;
+                  return (
+                      <button
+                          type="button"
+                          key={iconInfo.name}
+                          onClick={() => setSelectedIcon(iconInfo.name)}
+                          className={`p-3 rounded-lg border-2 ${selectedIcon === iconInfo.name ? 'border-primary bg-primary/10' : 'border-card-border bg-background'}`}
+                          title={iconInfo.displayName}
+                      >
+                          <IconComponent className="w-6 h-6" />
+                      </button>
+                  );
+              })}
+          </div>
         </div>
 
         <div className="flex justify-end pt-4">

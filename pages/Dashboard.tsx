@@ -12,7 +12,7 @@ import EditWalletModal from '../components/EditWalletModal';
 import { useAppContext } from '../contexts/AppContext';
 
 // --- 1. IMPORT ICONS ---
-import { LaptopIcon, AirplaneIcon, EmergencyFundIcon } from '../constants';
+import { LaptopIcon, AirplaneIcon, EmergencyFundIcon, DefaultIcon } from '../constants';
 
 // --- 2. TẠO ICON DỰ PHÒNG CỤC BỘ (QUAN TRỌNG) ---
 // Nếu import bị lỗi, icon này sẽ hiện ra thay thế để tránh trắng màn hình
@@ -25,6 +25,7 @@ const GOAL_ICON_MAP: Record<string, any> = {
     'Laptop': LaptopIcon,
     'Airplane': AirplaneIcon,
     'Emergency': EmergencyFundIcon,
+    'Default': DefaultIcon,
 };
 
 // --- SUB-COMPONENTS ---
@@ -36,7 +37,7 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
         <div className="p-2 bg-background rounded-full border border-card-border">
           {React.isValidElement(transaction.icon) 
             ? React.cloneElement(transaction.icon as React.ReactElement<{ className?: string }>, { className: 'h-6 w-6 text-primary' })
-            : <SafeIcon className="h-6 w-6" /> 
+            : <DefaultIcon className="h-6 w-6" /> 
           }
         </div>
         <div className="ml-4">
@@ -80,6 +81,14 @@ const BudgetProgress: React.FC<{ budget: Budget }> = ({ budget }) => {
 
 // --- MAIN DASHBOARD ---
 const Dashboard: React.FC = () => {
+  console.log('=== DASHBOARD DEBUG ===');
+  console.log('1. Icon imports:', {
+    LaptopIcon: !!LaptopIcon,
+    AirplaneIcon: !!AirplaneIcon,
+    EmergencyFundIcon: !!EmergencyFundIcon,
+    DefaultIcon: !!DefaultIcon
+  });
+
   const { 
     wallets, transactions, budgets, goals, 
     handleAddWallet, handleEditWallet, handleDeleteWallet,
@@ -145,7 +154,7 @@ const Dashboard: React.FC = () => {
     
     // 1. Xác định Icon cần vẽ
     // Mặc định dùng SafeIcon (không bao giờ lỗi)
-    let IconToRender: any = SafeIcon; 
+    let IconToRender: any = DefaultIcon; 
 
     // Nếu import thành công, ưu tiên dùng LaptopIcon
     if (LaptopIcon) IconToRender = LaptopIcon;
@@ -167,7 +176,7 @@ const Dashboard: React.FC = () => {
             ) : (
                 React.isValidElement(goal.icon) 
                     ? React.cloneElement(goal.icon as React.ReactElement<{ className?: string }>, { className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` })
-                    : <SafeIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
+                    : <DefaultIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />
             )}
         </div>
         

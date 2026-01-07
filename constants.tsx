@@ -260,3 +260,4 @@ export const MOCK_DEBTS_LOANS: DebtLoanItem[] = [
   { id: 'dl2', type: 'loan', person: 'Bảo', initialAmount: 2000000, paidAmount: 500000, description: 'Cho vay tiền đóng học phí', dueDate: '2024-09-30' },
   { id: 'dl3', type: 'debt', person: 'Ngân hàng VCB', initialAmount: 20000000, paidAmount: 15000000, description: 'Trả góp xe máy', dueDate: '2025-06-30' },
 ];
+
