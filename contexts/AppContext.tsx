@@ -10,6 +10,8 @@ import {
 } from '../constants';
 import { apiService } from '../services/apiService';
 import Toast, { ToastType } from '../components/Toast';
+// IMPORT DEFAULT ICON ĐỂ DỰ PHÒNG (QUAN TRỌNG)
+import { DefaultIcon } from '../components/Icons';
 
 import vi from '../i18n/vi.json'; 
 import en from '../i18n/en.json';
@@ -61,7 +63,7 @@ interface AppContextType {
   handleAddTransaction: (tx: Omit<Transaction, 'id' | 'icon'>) => Promise<void>;
   handleUpdateTransaction: (tx: Transaction) => void;
   handleDeleteTransaction: (id: string) => Promise<void>;
-  handleWalletTransfer: (from: string, to: string, amount: number, date: string) => Promise<void>;
+  handleWalletTransfer: (from: string, to: string, amount: number, date: string, note?: string) => Promise<void>;
   handleAddCategory: (cat: any) => Promise<void>;
   handleEditCategory: (originalName: string, data: any) => Promise<void>;
   handleDeleteCategory: (name: string, reassignTo: string) => Promise<void>;
@@ -201,20 +203,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }).format(value);
   }, [language, travelMode]);
 
-  // --- 3. DATA FETCHING ---
+  // --- 3. DATA FETCHING (ĐÃ SỬA LỖI ICON VÀ FETCH) ---
   const initAppData = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const [
-        walletsData, 
-        txData, 
-        budgetsData, 
-        goalsData, 
-        debtsData, 
-        groupsData, 
-        notifsData, 
-        customCats
-      ] = await Promise.all([
+      // Dùng Promise.allSettled để tránh sập toàn bộ nếu 1 API lỗi
+      const results = await Promise.allSettled([
         apiService.getWallets(),
         apiService.getTransactions(),
         apiService.getBudgets(),
@@ -225,31 +219,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         apiService.getCustomCategories(),
       ]);
 
-      setWallets(walletsData.map((w: any) => ({
-          ...w,
-          icon: React.createElement(iconMap[w.type + 'Icon'] || iconMap.FoodIcon, { className: 'w-8 h-8' })
-      })));
+      // Helper function để lấy data an toàn từ kết quả Promise
+      const getData = (index: number, defaultVal: any = []) => 
+        results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<any>).value : defaultVal;
 
-      const allCats = [...INITIAL_TRANSACTION_CATEGORIES, ...customCats];
-      setTransactionCategories(allCats);
-
-      setTransactions(txData.map((tx: any) => {
-          const cat = allCats.find(c => c.name === tx.category);
+      // --- XỬ LÝ WALLETS (KÈM ICON FALLBACK) ---
+      const walletsData = getData(0);
+      setWallets(walletsData.map((w: any) => {
+          const iconKey = w.type + 'Icon';
+          const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
           return {
-              ...tx,
-              icon: React.createElement(iconMap[cat?.iconName || 'FoodIcon'], { className: 'w-6 h-6' })
+              ...w,
+              icon: React.createElement(IconComponent, { className: 'w-8 h-8' })
           };
       }));
 
-      setBudgets(budgetsData);
-      setGoals(goalsData.map((g: any) => ({
-          ...g,
-          icon: React.createElement(iconMap[g.iconName || 'PiggyBankIcon'], { className: 'w-8 h-8' })
-      })));
-      setDebtsLoans(debtsData);
-      setGroups(groupsData);
-      setNotifications(notifsData);
+      // --- XỬ LÝ CATEGORIES ---
+      const customCats = getData(7);
+      const allCats = [...INITIAL_TRANSACTION_CATEGORIES, ...customCats];
+      setTransactionCategories(allCats);
 
+      // --- XỬ LÝ TRANSACTIONS (KÈM ICON FALLBACK) ---
+      const txData = getData(1);
+      setTransactions(txData.map((tx: any) => {
+          const cat = allCats.find(c => c.name === tx.category);
+          const iconKey = cat?.iconName || 'FoodIcon';
+          const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
+          return {
+              ...tx,
+              icon: React.createElement(IconComponent, { className: 'w-6 h-6' })
+          };
+      }));
+
+      // --- CÁC DỮ LIỆU KHÁC ---
+      setBudgets(getData(2));
+      
+      // Goals
+      const goalsData = getData(3);
+      setGoals(goalsData.map((g: any) => {
+          const iconKey = g.iconName || 'PiggyBankIcon';
+          const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
+          return {
+              ...g,
+              icon: React.createElement(IconComponent, { className: 'w-8 h-8' })
+          };
+      }));
+
+      setDebtsLoans(getData(4));
+      setGroups(getData(5));
+      setNotifications(getData(6));
+
+      // Admin Data
       if (user?.isAdmin) {
           try {
             const [users, stats] = await Promise.all([
@@ -264,6 +284,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     } catch (error) {
       console.error("Fetch data error:", error);
+      // Không throw error ở đây để tránh crash app, chỉ log
     }
   }, [isAuthenticated, user?.isAdmin]);
 
@@ -400,16 +421,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Đổi mật khẩu thành công", "success");
   };
 
-  // --- 5. FUNCTIONAL ACTIONS ---
+  // --- 5. FUNCTIONAL ACTIONS (FIXED ICON SAFE) ---
 
   const handleAddWallet = async (data: any) => {
     try {
       const newWalletData = await apiService.addWallet(data);
+      
+      const iconKey = newWalletData.type + 'Icon';
+      const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
+
       setWallets((prevWallets) => [
         ...prevWallets, 
         { 
           ...newWalletData, 
-          icon: React.createElement(iconMap[newWalletData.type + 'Icon'] || iconMap.FoodIcon, { className: 'w-8 h-8' })
+          icon: React.createElement(IconComponent, { className: 'w-8 h-8' })
         }
       ]);
       showToast("Đã thêm ví mới", "success");
@@ -449,19 +474,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const handleAddTransaction = async (data: any) => {
     try {
-      console.log("🔍 [AppContext] handleAddTransaction called with:", data);
-      
       const newTransactionData = await apiService.addTransaction(data);
-      console.log("✅ [AppContext] API Response:", newTransactionData);
       
       const allCats = [...INITIAL_TRANSACTION_CATEGORIES, ...transactionCategories.filter(c => !INITIAL_TRANSACTION_CATEGORIES.some(ic => ic.name === c.name))];
       const cat = allCats.find(c => c.name === newTransactionData.category);
       
+      const iconKey = cat?.iconName || 'FoodIcon';
+      const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
+
       setTransactions((prevTransactions) => [
         ...prevTransactions,
         {
           ...newTransactionData,
-          icon: React.createElement(iconMap[cat?.iconName || 'FoodIcon'], { className: 'w-6 h-6' })
+          icon: React.createElement(IconComponent, { className: 'w-6 h-6' })
         }
       ]);
       
@@ -499,8 +524,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const handleUpdateTransaction = async (tx: Transaction) => {
     try {
-      console.log("Đang cập nhật giao dịch:", tx);
-
       await apiService.updateTransaction(tx.id, tx);
 
       setTransactions((prev) => 

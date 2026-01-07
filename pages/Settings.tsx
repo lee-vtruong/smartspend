@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { useAppContext } from '../contexts/AppContext';
 import { SUPPORTED_CURRENCIES, CURRENCY_RATES } from '../constants';
-import { Language } from '../types';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import CategorySettingsCard from '../components/CategorySettingsCard';
-
 
 const ToggleSwitch: React.FC<{ label: string; enabled: boolean; onToggle: () => void; }> = ({ label, enabled, onToggle }) => (
     <div className="flex items-center justify-between py-2">
@@ -80,7 +78,6 @@ const Settings: React.FC = () => {
     const handleProfileUpdate = (e: React.FormEvent) => {
         e.preventDefault();
         updateProfile(displayName, email);
-        alert(`${t('settings.profileUpdateAlert.message')}:\nTên: ${displayName}\nEmail: ${email}`);
     };
     
     const commonInputClass = "mt-1 block w-full px-3 py-2 bg-background border border-card-border rounded-md shadow-sm focus:outline-none focus:ring-1 sm:text-sm";

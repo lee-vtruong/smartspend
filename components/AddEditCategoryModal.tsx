@@ -3,6 +3,8 @@ import Modal from './Modal';
 import { TransactionCategory } from '../types';
 import { iconMap, ALL_ICONS } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
+// IMPORT DEFAULT ICON ĐỂ DỰ PHÒNG
+import { DefaultIcon } from './Icons';
 
 interface AddEditCategoryModalProps {
   isOpen: boolean;
@@ -27,7 +29,6 @@ const AddEditCategoryModal: React.FC<AddEditCategoryModalProps> = ({ isOpen, onC
                 setType(categoryToEdit.type);
                 setIconName(categoryToEdit.iconName);
             } else {
-                // Reset for new category
                 setName('');
                 setType('expense');
                 setIconName('FoodIcon');
@@ -63,7 +64,7 @@ const AddEditCategoryModal: React.FC<AddEditCategoryModalProps> = ({ isOpen, onC
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t(isEditMode ? 'settings.addCategory.editTitle' : 'settings.addCategory.title')}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                {error && <p className="text-danger text-sm text-center bg-danger/10 p-2 rounded-md">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md">{error}</p>}
                 <div>
                     <label htmlFor="cat-name" className="block text-sm font-medium text-muted">{t('settings.addCategory.nameLabel')}</label>
                     <input
@@ -81,24 +82,26 @@ const AddEditCategoryModal: React.FC<AddEditCategoryModalProps> = ({ isOpen, onC
                 <div>
                     <label className="block text-sm font-medium text-muted">{t('settings.addCategory.typeLabel')}</label>
                     <div className="grid grid-cols-2 gap-2 rounded-lg bg-background p-1 mt-1">
-                        <button type="button" onClick={() => setType('expense')} disabled={isEditMode} className={`py-2 text-center font-semibold rounded-md transition-all ${type === 'expense' ? 'bg-card shadow text-danger' : 'text-muted'} ${isEditMode ? 'cursor-not-allowed opacity-50' : 'hover:bg-card/50'}`}>{t('addTransaction.expense')}</button>
-                        <button type="button" onClick={() => setType('income')} disabled={isEditMode} className={`py-2 text-center font-semibold rounded-md transition-all ${type === 'income' ? 'bg-card shadow text-success' : 'text-muted'} ${isEditMode ? 'cursor-not-allowed opacity-50' : 'hover:bg-card/50'}`}>{t('addTransaction.income')}</button>
+                        <button type="button" onClick={() => setType('expense')} disabled={isEditMode} className={`py-2 text-center font-semibold rounded-md transition-all ${type === 'expense' ? 'bg-white dark:bg-gray-700 shadow text-red-500' : 'text-gray-500'} ${isEditMode ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'}`}>{t('addTransaction.expense')}</button>
+                        <button type="button" onClick={() => setType('income')} disabled={isEditMode} className={`py-2 text-center font-semibold rounded-md transition-all ${type === 'income' ? 'bg-white dark:bg-gray-700 shadow text-green-500' : 'text-gray-500'} ${isEditMode ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'}`}>{t('addTransaction.income')}</button>
                     </div>
                 </div>
                 
                 <div>
                     <label className="block text-sm font-medium text-muted">{t('settings.addCategory.iconLabel')}</label>
-                    <div className="mt-2 grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-2 bg-background rounded-lg">
+                    <div className="mt-2 grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-2 bg-background rounded-lg border border-card-border">
                         {ALL_ICONS.map(key => {
-                            const IconComponent = iconMap[key];
+                            // --- FIX QUAN TRỌNG: Fallback về DefaultIcon nếu map lỗi ---
+                            const IconComponent = iconMap[key] || DefaultIcon;
+                            
                             return (
                                 <button
                                     type="button"
                                     key={key}
                                     onClick={() => setIconName(key)}
-                                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${iconName === key ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-primary/5'}`}
+                                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${iconName === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                                 >
-                                    <IconComponent className="w-6 h-6 text-text" />
+                                    <IconComponent className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                                 </button>
                             );
                         })}
@@ -106,8 +109,8 @@ const AddEditCategoryModal: React.FC<AddEditCategoryModalProps> = ({ isOpen, onC
                 </div>
 
                 <div className="flex justify-end pt-4 space-x-2">
-                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg font-semibold text-text bg-background hover:bg-gray-200 dark:hover:bg-gray-700">{t('common.cancel')}</button>
-                    <button type="submit" className="px-6 py-2 rounded-lg font-semibold bg-primary text-primary-content hover:opacity-90">{t(isEditMode ? 'common.saveChanges' : 'common.add')}</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">{t('common.cancel')}</button>
+                    <button type="submit" className="px-6 py-2 rounded-lg font-semibold bg-blue-600 text-white hover:opacity-90">{t(isEditMode ? 'common.saveChanges' : 'common.add')}</button>
                 </div>
             </form>
         </Modal>
