@@ -9,10 +9,14 @@ interface AddGoalModalProps {
   onAdd: (goal: Omit<Goal, 'id' | 'icon'> & { icon: string }) => void;
 }
 
+const SafeIcon: React.FC<{className?: string}> = ({ className }) => (
+    <div className={`rounded-full bg-gray-400 ${className}`} style={{ minWidth: '24px', minHeight: '24px' }} />
+);
+
 const goalIcons = [
-    { name: 'Laptop', icon: <LaptopIcon className="w-6 h-6" /> },
-    { name: 'Airplane', icon: <AirplaneIcon className="w-6 h-6" /> },
-    { name: 'Emergency', icon: <EmergencyFundIcon className="w-6 h-6" /> },
+    { name: 'Laptop', icon: LaptopIcon ? <LaptopIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
+    { name: 'Airplane', icon: AirplaneIcon ? <AirplaneIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
+    { name: 'Emergency', icon: EmergencyFundIcon ? <EmergencyFundIcon className="w-6 h-6" /> : <SafeIcon className="w-6 h-6" /> },
 ];
 
 const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onAdd }) => {
