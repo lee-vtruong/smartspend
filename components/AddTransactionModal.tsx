@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Transaction, Wallet } from '../types';
-import { GoogleGenAI } from "@google/genai";
+// Đã xóa import GoogleGenAI ở đây
 import { useAppContext } from '../contexts/AppContext';
 import { iconMap } from '../constants';
+import { apiService } from '../services/apiService'; // Thêm import này
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -76,27 +76,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     
     setIsAiParsing(true);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
         const categoryNames = transactionCategories.map(c => c.name);
         const walletNames = wallets.map(w => w.name);
         
-        const prompt = `Phân tích văn bản giao dịch: "${aiInput}". 
-        Hãy trả về JSON theo định dạng: { "type": "expense"|"income", "amount": number, "payee": string, "category": string, "wallet": string }.
-        
-        Quy tắc bắt buộc:
-        1. Nếu văn bản vô nghĩa hoặc KHÔNG chứa con số cụ thể nào để làm số tiền, hãy trả về JSON rỗng: {}.
-        2. Danh mục hợp lệ (chọn 1): ${categoryNames.join(', ')}.
-        3. Ví hợp lệ (chọn 1): ${walletNames.join(', ')}.
-        4. Nếu không khớp ví, mặc định ví đầu tiên. Nếu không khớp danh mục, mặc định 'category.food' hoặc 'category.otherIncome'.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-        });
-
-        const textResponse = response.text || '{}';
-        const data = JSON.parse(textResponse);
+        const data = await apiService.analyzeTransaction(aiInput, categoryNames, walletNames);
+        // -------------------------------------
 
         if (!data.amount || data.amount <= 0) {
             alert("AI không thể nhận dạng. Vui lòng nhập thủ công.");
@@ -143,7 +127,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     <Modal isOpen={isOpen} onClose={onClose} title={t(isEditMode ? 'addTransaction.editTitle' : 'addTransaction.title')}>
       <div className="space-y-6">
         
-        {/* AI INPUT SECTION - HIGHLIGHTED */}
+        {/* AI INPUT SECTION - GIỮ NGUYÊN Y HỆT */}
         {!isEditMode && (
             <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
@@ -177,7 +161,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             </div>
         )}
 
-        {/* MANUAL FORM SECTION */}
+        {/* MANUAL FORM SECTION - GIỮ NGUYÊN Y HỆT */}
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-background/50 p-1 border border-card-border">
                 <button type="button" onClick={() => setType('expense')} className={`py-2 text-center font-bold rounded-lg transition-all ${type === 'expense' ? 'bg-card shadow-sm text-danger scale-[1.02]' : 'text-muted hover:text-text'}`}>{t('addTransaction.expense')}</button>

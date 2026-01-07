@@ -107,6 +107,17 @@ export const apiService = {
     a.remove();
   },
 
+  analyzeTransaction: async (aiInput: string, categoryNames: string[], walletNames: string[]) => {
+    const response = await fetch(`${API_BASE_URL}/analyze-transaction`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ aiInput, categoryNames, walletNames }),
+    });
+
+    if (!response.ok) throw new Error('AI Server Error');
+    return response.json();
+  },
+
   // WALLETS
   async getWallets() {
     const res = await fetch(`${API_BASE_URL}/wallets`, { headers: getHeaders() });

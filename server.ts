@@ -1075,6 +1075,43 @@ app.post('/api/notifications/mark-read', authenticate, async (req: any, res: any
 });
 
 // --- AI ENDPOINTS ---
+app.post('/api/analyze-transaction', async (req: any, res: any) => {
+    try {
+        // Nhận các biến từ frontend gửi xuống
+        const { aiInput, categoryNames, walletNames } = req.body;
+
+        // Code khởi tạo y hệt cũ, chỉ đổi tên biến môi trường cho đúng server
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        
+        // --- GIỮ NGUYÊN PROMPT CŨ ---
+        const prompt = `Phân tích văn bản giao dịch: "${aiInput}". 
+        Hãy trả về JSON theo định dạng: { "type": "expense"|"income", "amount": number, "payee": string, "category": string, "wallet": string }.
+        
+        Quy tắc bắt buộc:
+        1. Nếu văn bản vô nghĩa hoặc KHÔNG chứa con số cụ thể nào để làm số tiền, hãy trả về JSON rỗng: {}.
+        2. Danh mục hợp lệ (chọn 1): ${categoryNames.join(', ')}.
+        3. Ví hợp lệ (chọn 1): ${walletNames.join(', ')}.
+        4. Nếu không khớp ví, mặc định ví đầu tiên. Nếu không khớp danh mục, mặc định 'category.food' hoặc 'category.otherIncome'.`;
+
+        // --- GỌI MODEL Y HỆT CŨ (gemini-3-flash-preview) ---
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+        });
+
+        // --- CÁCH PARSE RESPONSE Y HỆT CŨ ---
+        const textResponse = response.text || '{}';
+        const data = JSON.parse(textResponse);
+
+        res.json(data);
+
+    } catch (error: any) {
+        console.error("AI Parsing error:", error);
+        res.status(500).json({ message: "Lỗi phân tích AI" });
+    }
+});
+
 app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
   try {
     const { message, context } = req.body;
