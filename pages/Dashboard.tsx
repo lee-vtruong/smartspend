@@ -11,33 +11,53 @@ import Achievements from '../components/Achievements';
 import EditWalletModal from '../components/EditWalletModal';
 import { useAppContext } from '../contexts/AppContext';
 
-// --- 1. IMPORT ICONS TỪ CONSTANTS ---
-import { LaptopIcon, AirplaneIcon, EmergencyFundIcon } from '../constants';
+// --- 1. KHAI BÁO ICON TRỰC TIẾP TẠI ĐÂY (Để tránh lỗi import undefined) ---
 
-// --- 2. TẠO ICON CỨU HỘ (Định nghĩa ngay tại đây để không bao giờ bị undefined) ---
+const LocalLaptopIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-1.621-1.621A3 3 0 0 1 14.1 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25Z" />
+    </svg>
+);
+
+const LocalAirplaneIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+    </svg>
+);
+
+const LocalEmergencyIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+);
+
+// Icon dự phòng cuối cùng
 const RescueIcon: React.FC<{className?: string}> = ({ className }) => (
     <div className={`flex items-center justify-center rounded-full bg-gray-200 text-gray-500 font-bold text-xs ${className}`} style={{ width: '24px', height: '24px' }}>
         ?
     </div>
 );
 
-// --- 3. BẢNG ÁNH XẠ ICON ---
-// Sử dụng 'any' để tránh lỗi TypeScript khắt khe
+// --- 2. MAP ICON SỬ DỤNG ICON NỘI BỘ ---
 const GOAL_ICON_MAP: Record<string, any> = {
-    'Laptop': LaptopIcon,
-    'Airplane': AirplaneIcon,
-    'Emergency': EmergencyFundIcon,
+    'Laptop': LocalLaptopIcon,
+    'Airplane': LocalAirplaneIcon,
+    'Emergency': LocalEmergencyIcon,
 };
 
 // --- SUB-COMPONENTS ---
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
   const { t, formatCurrency } = useAppContext();
   
-  // Logic render icon an toàn cho Transaction
+  // Logic render an toàn cho Transaction
   let IconDisplay = <RescueIcon className="h-6 w-6" />;
-  if (React.isValidElement(transaction.icon)) {
-      // Ép kiểu an toàn
-      IconDisplay = React.cloneElement(transaction.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-primary' });
+  
+  try {
+      if (React.isValidElement(transaction.icon)) {
+          IconDisplay = React.cloneElement(transaction.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-primary' });
+      }
+  } catch (e) {
+      // Nếu lỗi clone, giữ nguyên RescueIcon
   }
 
   return (
@@ -94,7 +114,6 @@ const Dashboard: React.FC = () => {
     t, formatCurrency
   } = useAppContext();
   
-  // Modal States
   const [isWalletModalOpen, setWalletModalOpen] = useState(false);
   const [isEditWalletModalOpen, setEditWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<Wallet | null>(null);
@@ -104,7 +123,6 @@ const Dashboard: React.FC = () => {
   const [isFundGoalModalOpen, setFundGoalModalOpen] = useState(false);
   const [goalToFund, setGoalToFund] = useState<Goal | null>(null);
 
-  // Menu Dropdown State
   const [openWalletMenu, setOpenWalletMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +138,6 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  // Handlers
   const onAddGoal = (goalData: Omit<Goal, 'id' | 'icon'> & { icon: string }) => {
     handleAddGoal(goalData);
     setAddGoalModalOpen(false);
@@ -144,37 +161,29 @@ const Dashboard: React.FC = () => {
     setOpenWalletMenu(null);
   }
   
-  // --- 4. GOAL ITEM (PHIÊN BẢN CHỐNG SẬP TUYỆT ĐỐI) ---
+  // --- 3. GOAL ITEM (FIXED) ---
   const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
     const percentage = (goal.currentAmount / goal.targetAmount) * 100;
     const isCompleted = percentage >= 100;
     const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
     
-    // --- LOGIC XỬ LÝ ICON ---
-    // Mặc định dùng RescueIcon (Icon Cứu hộ)
+    // Mặc định dùng RescueIcon
     let RenderedIcon = <RescueIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
 
     try {
         if (typeof goal.icon === 'string') {
-            // Tìm trong Map
             const MappedIcon = GOAL_ICON_MAP[goal.icon];
-            // Quan trọng: Kiểm tra xem kết quả map có phải là một hàm/component hợp lệ không
-            if (MappedIcon && typeof MappedIcon === 'function') {
-                const IconComponent = MappedIcon;
-                RenderedIcon = <IconComponent className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
-            } else {
-                console.warn("Icon not found or invalid in Map:", goal.icon);
-                // Giữ nguyên RescueIcon
+            if (MappedIcon) {
+                // Render component local (chắc chắn tồn tại)
+                RenderedIcon = <MappedIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
             }
         } else if (React.isValidElement(goal.icon)) {
-            // Logic cũ cho dữ liệu cũ
             RenderedIcon = React.cloneElement(goal.icon as React.ReactElement<any>, { 
                 className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` 
             });
         }
     } catch (err) {
-        console.error("Error rendering icon for goal:", goal.name, err);
-        // Nếu lỗi, RescueIcon sẽ được hiển thị
+        console.error("Icon render error", err);
     }
 
     return (
@@ -182,7 +191,6 @@ const Dashboard: React.FC = () => {
         <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
             {RenderedIcon}
         </div>
-        
         <div className="flex-1">
           <div className="flex justify-between items-center mb-1">
             <span className="font-bold text-sm text-text">{goal.name || "Mục tiêu"}</span>
@@ -222,7 +230,6 @@ const Dashboard: React.FC = () => {
         
         {/* 2. LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-6">
-            {/* Recent Transactions */}
             <Card title={t('dashboard.recentTransactions')}>
                 {transactions.length > 0 ? (
                 <ul className="divide-y divide-card-border/50">
@@ -235,7 +242,6 @@ const Dashboard: React.FC = () => {
                 )}
             </Card>
 
-            {/* My Wallets */}
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-text">{t('dashboard.myWallets')}</h3>
@@ -245,12 +251,11 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   {wallets.map(w => {
-                     // Logic render icon an toàn cho Wallet
+                     // Render Wallet Icon
                      let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
                      if (React.isValidElement(w.icon)) {
                          WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
                      }
-
                      return (
                      <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
@@ -264,13 +269,11 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center">
                           <p className="font-bold text-lg mr-3 text-primary">{formatCurrency(w.balance, true, w.currency)}</p>
-                          
                           <button onClick={() => setOpenWalletMenu(openWalletMenu === w.id ? null : w.id)} className="p-1 text-muted hover:text-text">
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                               </svg>
                           </button>
-                          
                           {openWalletMenu === w.id && (
                                 <div ref={menuRef} className="absolute right-2 top-12 w-32 bg-card rounded-lg shadow-xl border border-card-border z-10 overflow-hidden animate-fade-in-up">
                                   <button onClick={() => onEditWallet(w)} className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-primary/10 font-medium">{t('common.edit')}</button>
@@ -286,7 +289,6 @@ const Dashboard: React.FC = () => {
 
         {/* 3. RIGHT COLUMN */}
         <div className="space-y-6">
-           {/* Budgets */}
            <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.budgets')}</h3>
@@ -303,10 +305,8 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          {/* Achievements */}
           <Achievements />
 
-          {/* Goals */}
           <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.financialGoals')}</h3>
@@ -325,7 +325,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* FAB */}
       <button 
         onClick={() => setTransactionModalOpen(true)} 
         className="fixed bottom-8 right-6 bg-primary text-white p-4 rounded-full shadow-2xl hover:bg-primary-focus transition-all transform hover:scale-110 hover:rotate-90 z-40"
@@ -335,7 +334,6 @@ const Dashboard: React.FC = () => {
         </svg>
       </button>
 
-      {/* MODALS */}
       <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
       {isEditWalletModalOpen && walletToEdit && (
         <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />
