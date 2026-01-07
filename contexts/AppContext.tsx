@@ -14,9 +14,6 @@ import Toast, { ToastType } from '../components/Toast';
 import vi from '../i18n/vi.json'; 
 import en from '../i18n/en.json';
 
-// Firebase imports
-import { User as FirebaseUser } from 'firebase/auth';
-
 const translations: any = { vi, en };
 
 export interface AdminStats {
@@ -50,8 +47,8 @@ interface AppContextType {
   logout: () => void;
   updateProfile: (name: string, email: string) => Promise<void>;
   handleUpdateAvatar: () => Promise<void>;
-  handleResetPassword: (email: string, pass: string) => Promise<void>;
-  handleChangePassword: (old: string, newP: string) => Promise<void>;
+  handleResetPassword: (email: string) => Promise<void>;
+  handleChangePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   toggleUserLock: (id: string) => Promise<void>;
   
   // --- Data: Wallets & Transactions ---
@@ -79,12 +76,12 @@ interface AppContextType {
   handleAddGoal: (goal: Omit<Goal, 'id' | 'icon'> & { icon: string }) => Promise<void>;
   handleFundGoal: (id: string, amount: number, wallet: string) => Promise<void>;
   handleAddDebtLoan: (item: Omit<DebtLoanItem, 'id' | 'paidAmount'>) => Promise<void>;
-  handleRecordPayment: (id: string, amount: number) => Promise<void>;
+  handleRecordPayment: (id: string, amount: number, walletName: string) => Promise<void>;
 
   // --- Features: Groups, Chatbot, Achievements, Travel ---
   groups: any[];
   handleAddGroup: (group: any) => Promise<void>;
-  handleAddGroupTransaction: (groupId: string, data: any) => Promise<void>; // Đã khai báo ở đây
+  handleAddGroupTransaction: (groupId: string, data: any) => Promise<void>;
   
   achievements: Achievement[];
   unlockedAchievement: Achievement | null;
@@ -162,7 +159,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // --- 2. EFFECTS & HELPERS ---
   const showToast = (message: string, type: ToastType = 'info') => setToast({ message, type });
 
-  // Theme effect
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark', 'special');
@@ -171,7 +167,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('smartspend_theme', theme);
   }, [theme]);
 
-  // Translation helper
   const t = useCallback((key: string, params?: any) => {
     const keys = key.split('.');
     let value = translations[language];
@@ -195,7 +190,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return value;
   }, [language]);
 
-  // Currency helper
   const formatCurrency = useCallback((amount: number, useWalletCurrency = false, currency?: string) => {
     const curr = currency || (travelMode.enabled ? travelMode.currency : 'VND');
     const rate = CURRENCY_RATES[curr as CurrencyCode] || 1;
@@ -348,13 +342,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Đăng ký thành công! Hãy đăng nhập.", "success");
   };  
 
+
   const logout = () => {
     localStorage.removeItem('smartspend_token');
     localStorage.removeItem('smartspend_user');
+    
     setIsAuthenticated(false);
     setUser(null);
+    setGroups([]);
+    setTransactions([]);
+    setWallets([]);
+    setBudgets([]);
+    setGoals([]);
     setCurrentPage('dashboard'); 
     showToast("Đã đăng xuất");
+  };
+
+  const updateProfile = async (name: string, email: string) => { 
+    const updatedUser = await apiService.updateProfile({name, email}); 
+    setUser(updatedUser); 
+    localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
+    showToast("Cập nhật profile thành công", "success");
+  };
+
+  const handleUpdateAvatar = async () => { 
+    const result = await apiService.uploadAvatar(); 
+    const updatedUser = { ...user, avatar: result.avatarUrl };
+    setUser(updatedUser); 
+    localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
+    showToast("Cập nhật avatar thành công", "success");
+  };
+
+  const handleResetPassword = async (email: string) => { 
+    await apiService.resetPassword(email); 
+    showToast("Đã gửi email đặt lại mật khẩu", "success");
+  };
+
+  const handleChangePassword = async (oldPassword: string, newPassword: string) => { 
+    await apiService.changePassword({oldPassword, newPassword}); 
+    showToast("Đổi mật khẩu thành công", "success");
   };
 
   // --- 5. FUNCTIONAL ACTIONS ---
@@ -377,15 +403,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const handleWalletTransfer = async (from: string, to: string, amount: number, date: string) => {
-    await apiService.transferMoney({ fromWalletName: from, toWalletName: to, amount, date });
+  const handleEditWallet = async (wallet: Wallet) => {
+    await apiService.editWallet(wallet.id, wallet);
     await initAppData();
-    showToast("Chuyển tiền thành công", "success");
+    showToast("Cập nhật ví thành công", "success");
+  };
+
+  const handleDeleteWallet = async (id: string) => {
+    await apiService.deleteWallet(id);
+    await initAppData();
+    showToast("Đã xóa ví", "success");
+  };
+  const handleWalletTransfer = async (from: string, to: string, amount: number, date: string, note?: string) => {
+    try {
+        await apiService.transferMoney({ 
+            fromWalletName: from, 
+            toWalletName: to, 
+            amount, 
+            date, 
+            note 
+        });
+        await initAppData(); 
+        showToast("Chuyển tiền thành công", "success");
+    } catch (error: any) {
+        showToast(error.message || "Lỗi chuyển tiền", "error");
+    }
   };
 
   const handleAddTransaction = async (data: any) => {
     try {
+      console.log("🔍 [AppContext] handleAddTransaction called with:", data);
+      
       const newTransactionData = await apiService.addTransaction(data);
+      console.log("✅ [AppContext] API Response:", newTransactionData);
+      
       const allCats = [...INITIAL_TRANSACTION_CATEGORIES, ...transactionCategories.filter(c => !INITIAL_TRANSACTION_CATEGORIES.some(ic => ic.name === c.name))];
       const cat = allCats.find(c => c.name === newTransactionData.category);
       
@@ -408,16 +459,130 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       showToast("Giao dịch đã được ghi lại", "success");
     } catch (error: any) {
-      console.error("Lỗi thêm giao dịch:", error);
+      console.error("❌ [AppContext] Lỗi thêm giao dịch:", error);
       showToast(error.message || "Không thể thêm giao dịch!", "error");
       throw error;
     }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await apiService.deleteTransaction(id);
+      
+      setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+      
+      await initAppData();
+      
+      showToast("Đã xóa giao dịch", "success");
+    } catch (error: any) {
+      console.error("Lỗi xóa giao dịch:", error);
+      showToast(error.message || "Không thể xóa giao dịch", "error");
+    }
+  };
+
+  const handleUpdateTransaction = async (tx: Transaction) => {
+    try {
+      console.log("Đang cập nhật giao dịch:", tx);
+
+      await apiService.updateTransaction(tx.id, tx);
+
+      setTransactions((prev) => 
+        prev.map((t) => (t.id === tx.id ? { ...t, ...tx } : t))
+      );
+
+      await initAppData();
+
+      showToast("Cập nhật giao dịch thành công", "success");
+    } catch (error: any) {
+      console.error("Lỗi cập nhật giao dịch:", error);
+      showToast(error.message || "Không thể cập nhật giao dịch", "error");
+    }
+  };
+
+  const handleAddBudget = async (data: any) => {
+    await apiService.addBudget(data);
+    await initAppData();
+    showToast("Đã thêm ngân sách", "success");
+  };
+
+  const handleDeleteBudget = async (id: string) => {
+    await apiService.deleteBudget(id);
+    await initAppData();
+    showToast("Đã xóa ngân sách", "success");
+  };
+
+  const handleAddGoal = async (data: any) => {
+    await apiService.addGoal({...data, iconName: data.icon});
+    await initAppData();
+    showToast("Đã thêm mục tiêu", "success");
   };
 
   const handleFundGoal = async (id: string, amount: number, wallet: string) => {
     await apiService.fundGoal(id, { amount, walletName: wallet });
     await initAppData();
     showToast("Đã nạp tiền tiết kiệm", "success");
+  };
+
+  const handleAddDebtLoan = async (data: any) => {
+    try {
+      await apiService.addDebt(data);
+      await initAppData(); 
+      
+      showToast("Đã thêm khoản mới thành công", "success");
+    } catch (error: any) {
+      console.error("Lỗi thêm khoản nợ:", error);
+      showToast(error.message || "Không thể thêm khoản nợ", "error");
+    }
+  };
+
+  const handleRecordPayment = async (id: string, amount: number, walletName: string) => {
+    try {
+        await apiService.recordDebtPayment(id, amount, walletName);
+        await initAppData(); 
+        showToast("Đã ghi nhận thanh toán", "success");
+    } catch (error: any) {
+        showToast(error.message || "Lỗi ghi nhận thanh toán", "error");
+    }
+  };
+
+  const handleAddGroup = async (data: any) => {
+    await apiService.addGroup(data);
+    await initAppData();
+    showToast("Đã tạo nhóm mới", "success");
+  };
+
+  const handleAddGroupTransaction = async (groupId: string, data: any) => {
+    try {
+      await apiService.addGroupTransaction(groupId, data);
+      await initAppData();
+      showToast("Đã thêm chi tiêu vào nhóm!", "success");
+    } catch (error: any) {
+      showToast(error.message || "Lỗi thêm giao dịch nhóm", "error");
+    }
+  };
+
+  const toggleUserLock = async (id: string) => {
+    await apiService.adminToggleUserLock(id);
+    await initAppData();
+    showToast("Đã cập nhật trạng thái người dùng", "success");
+  };
+
+  const handleAddCategory = async (data: any) => {
+    await apiService.addCategory(data);
+    await initAppData();
+    showToast("Đã thêm danh mục", "success");
+  };
+
+  const handleEditCategory = async (name: string, data: any) => {
+    await apiService.editCategory(name, data);
+    await initAppData();
+    showToast("Đã cập nhật danh mục", "success");
+  };
+
+  const handleDeleteCategory = async (name: string, reassignTo: string) => {
+    await apiService.deleteCategory(name, reassignTo);
+    await initAppData();
+    showToast("Đã xóa danh mục", "success");
   };
 
   const exportData = async () => {
@@ -445,9 +610,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const sendNotification = async (title: string, message: string) => {
     try {
-        console.log("Đang gửi thông báo...", title); 
         await apiService.adminBroadcastNotification(title, message);
-        await initAppData(); 
+        await initAppData();
         showToast("Đã gửi thông báo thành công!", "success");
     } catch (error: any) {
         console.error("Gửi thất bại:", error);
@@ -455,16 +619,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // --- HÀM THÊM GIAO DỊCH NHÓM (QUAN TRỌNG) ---
-  const handleAddGroupTransaction = async (groupId: string, data: any) => {
-    try {
-      await apiService.addGroupTransaction(groupId, data);
-      await initAppData(); // Load lại dữ liệu
-      showToast("Đã thêm chi tiêu vào nhóm!", "success");
-    } catch (error: any) {
-      showToast(error.message || "Lỗi thêm giao dịch nhóm", "error");
-    }
+  const markNotificationsAsRead = async () => {
+    await apiService.markNotificationsRead();
+    setNotifications(prev => prev.map(n => ({...n, read: true})));
+    showToast("Đã đánh dấu tất cả thông báo đã đọc", "success");
   };
+
+  const updateNotificationSettings = async (key: string, value: boolean) => {
+    setNotificationSettings(prev => ({...prev, [key]: value}));
+    showToast("Đã cập nhật cài đặt thông báo", "success");
+  };
+
+  const toggleTravelMode = () => setTravelMode(prev => ({ ...prev, enabled: !prev.enabled }));
+
+  const setTravelCurrency = (currency: CurrencyCode) => setTravelMode(prev => ({ ...prev, currency }));
 
   // --- 6. RENDER PROVIDER ---
   return (
@@ -474,7 +642,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       wallets, transactions, budgets, goals, debtsLoans, 
       achievements, unlockedAchievement, setUnlockedAchievement,
       systemUsers, adminStats,
-      notifications, unreadNotificationCount: notifications.filter(n => !n.read).length,
+      notifications, 
+      unreadNotificationCount: notifications.filter(n => !n.read).length,
       transactionCategories, 
       user, isAuthenticated, isLoadingAuth,
       language, changeLanguage: setLanguage, t,
@@ -484,53 +653,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       // Features
       isChatbotOpen, setChatbotOpen, chatHistory, handleSendChatMessage, isChatbotLoading,
-      travelMode, toggleTravelMode: () => setTravelMode(p => ({ ...p, enabled: !p.enabled })),
-      setTravelCurrency: (c: any) => setTravelMode(p => ({ ...p, currency: c })),
+      travelMode, toggleTravelMode, setTravelCurrency,
       formatCurrency, 
       exportData, 
-      notificationSettings, 
-      updateNotificationSettings: async (k: any, v: any) => { setNotificationSettings(p => ({...p, [k]: v})); },
+      notificationSettings, updateNotificationSettings,
       
       // Auth Actions
       login, signup, logout, loginWithGoogle, setPassword,
-      updateProfile: async (n: any, e: any) => { const u = await apiService.updateProfile({name:n, email:e}); setUser(u); localStorage.setItem('smartspend_user', JSON.stringify(u)); },
-      handleUpdateAvatar: async () => { const r = await apiService.uploadAvatar(); setUser({...user, avatar: r.avatarUrl}); },
-      handleResetPassword: async (e: any, p: any) => { await apiService.resetPassword(e, p); },
-      handleChangePassword: async (o: any, n: any) => { await apiService.changePassword({oldPassword: o, newPassword: n}); },
+      updateProfile, handleUpdateAvatar, handleResetPassword, handleChangePassword,
 
       // CRUD Actions
       fetchInitialData: initAppData,
-      handleAddWallet, 
-      handleEditWallet: async (w: any) => { await apiService.editWallet(w.id, w); await initAppData(); },
-      handleDeleteWallet: async (id: any) => { await apiService.deleteWallet(id); await initAppData(); },
-      
-      handleAddTransaction, 
-      handleUpdateTransaction: () => {}, 
-      handleDeleteTransaction: async (id: any) => { await apiService.deleteTransaction(id); await initAppData(); },
+      handleAddWallet, handleEditWallet, handleDeleteWallet,
+      handleAddTransaction, handleUpdateTransaction, handleDeleteTransaction,
       handleWalletTransfer, 
-      
-      handleAddBudget: async (d: any) => { await apiService.addBudget(d); await initAppData(); },
-      handleDeleteBudget: async (id: any) => { await apiService.deleteBudget(id); await initAppData(); },
-      
-      handleAddGoal: async (d: any) => { await apiService.addGoal({...d, iconName: d.icon}); await initAppData(); },
-      handleFundGoal, 
-      
-      handleAddDebtLoan: async (d: any) => { await apiService.addDebt(d); await initAppData(); },
-      handleRecordPayment: async (id: any, a: any) => { await apiService.recordDebtPayment(id, a); await initAppData(); },
-      
-      handleAddGroup: async (g: any) => { await apiService.addGroup(g); await initAppData(); },
-      
-      // SỬA Ở ĐÂY: Dùng biến hàm đã khai báo bên trên, KHÔNG khai báo inline nữa
-      handleAddGroupTransaction, 
-      
-      toggleUserLock: async (id: any) => { await apiService.adminToggleUserLock(id); await initAppData(); },
-      
-      handleAddCategory: async (d: any) => { await apiService.addCategory(d); await initAppData(); },
-      handleEditCategory: async (n: any, d: any) => { await apiService.editCategory(n, d); await initAppData(); },
-      handleDeleteCategory: async (n: any, r: any) => { await apiService.deleteCategory(n, r); await initAppData(); },
-      
-      markNotificationsAsRead: async () => { await apiService.markNotificationsRead(); setNotifications(p => p.map(n => ({...n, read: true}))); },
-      sendNotification, 
+      handleAddBudget, handleDeleteBudget,
+      handleAddGoal, handleFundGoal,
+      handleAddDebtLoan, handleRecordPayment,
+      handleAddGroup, handleAddGroupTransaction,
+      toggleUserLock,
+      handleAddCategory, handleEditCategory, handleDeleteCategory,
+      markNotificationsAsRead, sendNotification,
     }}>
       {children}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

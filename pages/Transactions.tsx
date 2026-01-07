@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Transaction, TransactionCategory } from '../types';
 import Card from '../components/Card';
@@ -6,24 +5,29 @@ import AddTransactionModal from '../components/AddTransactionModal';
 import TransferWalletModal from '../components/TransferWalletModal';
 import { useAppContext } from '../contexts/AppContext';
 
+// Component con hiển thị từng dòng (Đã sửa để hiển thị Description nếu không có Payee)
 const TransactionListItem: React.FC<{ transaction: Transaction; onEdit: () => void; onDelete: () => void; }> = ({ transaction, onEdit, onDelete }) => {
     const { t, formatCurrency } = useAppContext();
+    
+    // Logic hiển thị tên: Nếu là chuyển khoản hoặc không có payee thì hiện description
+    const displayTitle = transaction.payee || transaction.description || "Giao dịch không tên";
+
     return (
         <li className="group flex items-center justify-between py-4 px-4 hover:bg-primary/5 rounded-xl transition-all duration-200 mb-2 border border-transparent hover:border-primary/10">
             <div className="flex items-center">
                 <div className="p-3 bg-background rounded-2xl shadow-sm border border-card-border group-hover:scale-110 transition-transform">
-                    {React.cloneElement(transaction.icon, { className: 'h-6 w-6 text-primary' })}
+                    {transaction.icon ? React.cloneElement(transaction.icon, { className: 'h-6 w-6 text-primary' }) : <div className="h-6 w-6 bg-primary/20 rounded-full" />}
                 </div>
                 <div className="ml-4">
-                    <p className="font-bold text-text group-hover:text-primary transition-colors">{transaction.payee}</p>
+                    <p className="font-bold text-text group-hover:text-primary transition-colors line-clamp-1">{displayTitle}</p>
                     <p className="text-sm text-muted flex items-center">
-                        <span className="bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase font-bold mr-2">{t(transaction.category)}</span>
-                        <span>{transaction.wallet}</span>
+                        <span className="bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase font-bold mr-2 whitespace-nowrap">{t(transaction.category || 'general')}</span>
+                        <span className="truncate max-w-[100px]">{transaction.wallet}</span>
                     </p>
                 </div>
             </div>
             <div className="flex items-center">
-                <div className="text-right mr-6">
+                <div className="text-right mr-6 min-w-[100px]">
                     <p className={`font-bold text-lg ${transaction.type === 'income' ? 'text-success' : 'text-danger'}`}>
                         {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
                     </p>
@@ -75,14 +79,31 @@ const TransactionsPage: React.FC = () => {
         }
     };
     
+    // --- ĐOẠN SỬA LỖI QUAN TRỌNG NHẤT ---
     const filteredTransactions = useMemo(() => {
         return transactions.filter(t => {
-            const matchesSearch = t.payee.toLowerCase().includes(searchTerm.toLowerCase());
+            const term = searchTerm.toLowerCase();
+            
+            // Sử dụng ( || '') để bảo vệ nếu trường dữ liệu bị thiếu
+            // Tìm kiếm cả trong payee và description
+            const payee = (t.payee || '').toLowerCase();
+            const desc = (t.description || '').toLowerCase();
+            const cat = (t.category || '').toLowerCase();
+            const wal = (t.wallet || '').toLowerCase();
+
+            const matchesSearch = 
+                payee.includes(term) || 
+                desc.includes(term) || 
+                cat.includes(term) ||
+                wal.includes(term);
+
             const matchesCategory = filterCategory === 'all' || t.category === filterCategory;
             const matchesWallet = filterWallet === 'all' || t.wallet === filterWallet;
+            
             return matchesSearch && matchesCategory && matchesWallet;
         });
     }, [transactions, searchTerm, filterCategory, filterWallet]);
+    // -------------------------------------
 
     const allCategories: TransactionCategory[] = transactionCategories;
     const allWallets: string[] = wallets.map(w => w.name);
@@ -110,7 +131,7 @@ const TransactionsPage: React.FC = () => {
         
         {/* Main Content Area */}
         <Card className="!p-0 flex-1 flex flex-col border-white/20 shadow-2xl bg-card/60 overflow-hidden">
-            {/* Filter Bar - Sticky */}
+            {/* Filter Bar */}
             <div className="p-5 border-b border-card-border bg-card/40 backdrop-blur-md sticky top-0 z-10">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2 relative">
@@ -157,7 +178,6 @@ const TransactionsPage: React.FC = () => {
                 )}
             </div>
 
-            {/* Footer Summary (Optional but looks professional) */}
             <div className="p-4 bg-background/30 border-t border-card-border flex justify-between items-center text-sm font-medium text-muted">
                 <span>Trang 1 / 1</span>
                 <span>SmartSpend Transaction Management</span>

@@ -1,4 +1,4 @@
-
+<!-- npx tsx watch server.ts -->
 # 🚀 SmartSpend - Personal Finance Manager
 
 SmartSpend là ứng dụng quản lý tài chính cá nhân và nhóm toàn diện, tích hợp trí tuệ nhân tạo (Gemini AI) để giúp người dùng theo dõi chi tiêu, lập kế hoạch ngân sách và nhận lời khuyên tài chính thông minh.

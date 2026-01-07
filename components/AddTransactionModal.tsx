@@ -9,7 +9,7 @@ import { iconMap } from '../constants';
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (transaction: Omit<Transaction, 'id' | 'icon'>) => void;
+  onAdd: (transaction: Omit<Transaction, 'id' | 'icon' | 'userId'>) => void; 
   onUpdate?: (transaction: Transaction) => void;
   wallets: Wallet[];
   transactionToEdit?: Transaction | null;
@@ -69,7 +69,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
   }, [transactionToEdit, isOpen, transactionCategories, wallets]);
 
   const handleAiParse = async () => {
-    if (aiInput.trim().length < 3) return;
+    if (aiInput.trim().length < 3) {
+        alert("AI không thể nhận dạng. Vui lòng nhập thủ công.");
+        return;
+    }
     
     setIsAiParsing(true);
     try {
@@ -78,10 +81,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
         const walletNames = wallets.map(w => w.name);
         
         const prompt = `Phân tích văn bản giao dịch: "${aiInput}". 
-        Hãy trả về JSON: { "type": "expense"|"income", "amount": number, "payee": string, "category": string, "wallet": string }.
-        Danh mục hợp lệ (chọn 1): ${categoryNames.join(', ')}.
-        Ví hợp lệ (chọn 1): ${walletNames.join(', ')}.
-        Nếu không khớp ví, mặc định ví đầu tiên. Nếu không khớp danh mục, mặc định 'category.food' hoặc 'category.otherIncome'.`;
+        Hãy trả về JSON theo định dạng: { "type": "expense"|"income", "amount": number, "payee": string, "category": string, "wallet": string }.
+        
+        Quy tắc bắt buộc:
+        1. Nếu văn bản vô nghĩa hoặc KHÔNG chứa con số cụ thể nào để làm số tiền, hãy trả về JSON rỗng: {}.
+        2. Danh mục hợp lệ (chọn 1): ${categoryNames.join(', ')}.
+        3. Ví hợp lệ (chọn 1): ${walletNames.join(', ')}.
+        4. Nếu không khớp ví, mặc định ví đầu tiên. Nếu không khớp danh mục, mặc định 'category.food' hoặc 'category.otherIncome'.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -89,16 +95,25 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             config: { responseMimeType: "application/json" }
         });
 
-        const data = JSON.parse(response.text || '{}');
+        const textResponse = response.text || '{}';
+        const data = JSON.parse(textResponse);
+
+        if (!data.amount || data.amount <= 0) {
+            alert("AI không thể nhận dạng. Vui lòng nhập thủ công.");
+            setIsAiParsing(false);
+            return;
+        }
+
         if (data.type) setType(data.type);
         if (data.amount) setAmount(data.amount);
         if (data.payee) setPayee(data.payee);
         if (data.category && categoryNames.includes(data.category)) setCategory(data.category);
         if (data.wallet && walletNames.includes(data.wallet)) setWallet(data.wallet);
         
-        setAiInput(''); // Xóa sau khi nhập thành công
+        setAiInput(''); 
     } catch (error) {
         console.error("AI Parsing error:", error);
+        alert("AI không thể nhận dạng. Vui lòng nhập thủ công.");
     } finally {
         setIsAiParsing(false);
     }
@@ -117,7 +132,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     if (isEditMode && onUpdate && transactionToEdit) {
       onUpdate({ ...transactionToEdit, type, amount, category, wallet, date, payee, icon: React.createElement(iconMap[iconName], { className: 'w-6 h-6' }) });
     } else {
-      onAdd({ type, amount, category, wallet, date, payee });
+      onAdd({ type, amount, category, wallet, date, payee }); 
     }
     onClose();
   };

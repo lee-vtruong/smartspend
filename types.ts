@@ -33,14 +33,23 @@ export interface Wallet {
 
 export interface Transaction {
   id: string;
+  userId: string;
+  wallet: string;     // Tên ví
   type: 'income' | 'expense';
   amount: number;
-  category: string; // This will now be a translation key, e.g., 'category.food'
+  category: string;
   date: string;
-  wallet: string;
-  payee: string;
-  // FIX: Using React.JSX.Element to explicitly reference the element type from React.
-  icon: React.JSX.Element;
+  
+  // Các trường tùy chọn (có thể có hoặc không)
+  payee?: string;       // Người thụ hưởng (thường có ở chi tiêu thường)
+  note?: string;        // Ghi chú cũ
+  
+  // --- CẬP NHẬT MỚI ---
+  description?: string; // <--- Thêm dòng này (Dùng cho mô tả chuyển khoản)
+  isTransfer?: boolean; // <--- Thêm dòng này (Để nhận biết là giao dịch chuyển tiền)
+  
+  // UI Properties (Được thêm vào ở Frontend)
+  icon?: any;           
 }
 
 export interface Budget {
@@ -108,9 +117,11 @@ export interface GroupTransaction {
 export interface Group {
   id: string;
   name: string;
-  currency: 'VND' | 'USD';
+  currency: string;
   members: GroupMember[];
-  transactions: GroupTransaction[];
+  transactions: GroupTransaction[]; 
+  createdBy: string;
+  createdAt?: string;
 }
 
 export interface Settlement {

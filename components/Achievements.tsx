@@ -20,8 +20,8 @@ const Achievements: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
                 {BADGES.map(badge => {
                     // Kiểm tra xem user có danh hiệu này trong mảng achievements chưa
-                    const isUnlocked = user?.achievements?.includes(badge.id);
-
+                    const isUnlocked = Array.isArray(user?.achievements) && user.achievements.includes(badge.id);
+                    
                     return (
                         <div 
                             key={badge.id} 

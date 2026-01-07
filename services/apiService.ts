@@ -1,15 +1,11 @@
-import { auth } from "../firebaseClient";
+import { auth, db } from "../firebaseClient";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query,     
-  where,    
-  orderBy,  
-  doc
+  collection, addDoc, getDocs, query, where, orderBy, 
+  doc, deleteDoc, updateDoc, 
+  getDoc
 } from "firebase/firestore";
-import { db } from "../firebaseClient";
+
 const API_BASE_URL = 'http://localhost:8000/api';
 
 const getHeaders = () => ({
@@ -18,7 +14,7 @@ const getHeaders = () => ({
 });
 
 export const apiService = {
-  // AUTH & PROFILEa
+  // AUTH & PROFILE
   async login(credentials: any) {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -32,9 +28,7 @@ export const apiService = {
     return res.json();
   },
 
-  // Trong apiService.ts
-
-async signup(name: string, email: string, password: string) {
+  async signup(name: string, email: string, password: string) {
     console.log("Check data:", { name, email, password }); 
 
     const res = await fetch(`${API_BASE_URL}/auth/signup`, { 
@@ -61,7 +55,8 @@ async signup(name: string, email: string, password: string) {
     }
 
     return res.json();
-},
+  },
+
   async updateProfile(data: any) {
     const res = await fetch(`${API_BASE_URL}/profile`, {
       method: 'PUT',
@@ -70,18 +65,24 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+
   async uploadAvatar() {
-    // Giả lập upload avatar
-    return { avatarUrl: `https://picsum.photos/seed/${Math.random()}/100` };
+    const res = await fetch(`${API_BASE_URL}/upload-avatar`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    return res.json();
   },
+
   async changePassword(data: any) {
-    const res = await fetch(`${API_BASE_URL}/profile/change-password`, {
+    const res = await fetch(`${API_BASE_URL}/change-password`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
     return res.json();
   },
+
   async resetPassword(email: string) {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -111,6 +112,7 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/wallets`, { headers: getHeaders() });
     return res.json();
   },
+  
   async addWallet(data: any) {
     const res = await fetch(`${API_BASE_URL}/wallets`, {
       method: 'POST',
@@ -119,6 +121,7 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async deleteWallet(id: string) {
     const res = await fetch(`${API_BASE_URL}/wallets/${id}`, {
       method: 'DELETE',
@@ -126,6 +129,7 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async editWallet(id: string, data: any) {
     const res = await fetch(`${API_BASE_URL}/wallets/${id}`, {
       method: 'PUT',
@@ -134,12 +138,14 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
-  async transferMoney(data: any) {
+  
+  async transferMoney(data: { fromWalletName: string, toWalletName: string, amount: number, date: string, note?: string }) {
     const res = await fetch(`${API_BASE_URL}/wallets/transfer`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
+    
     if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Lỗi chuyển tiền');
@@ -152,6 +158,7 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/transactions`, { headers: getHeaders() });
     return res.json();
   },
+  
   async addTransaction(data: any) {
     const res = await fetch(`${API_BASE_URL}/transactions`, {
       method: 'POST',
@@ -160,6 +167,7 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async deleteTransaction(id: string) {
     const res = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: 'DELETE',
@@ -168,11 +176,26 @@ async signup(name: string, email: string, password: string) {
     return res.json();
   },
 
+  async updateTransaction(id: string, data: any) {
+    const res = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi cập nhật giao dịch');
+    }
+    return res.json();
+  },
+
   // BUDGETS
   async getBudgets() {
     const res = await fetch(`${API_BASE_URL}/budgets`, { headers: getHeaders() });
     return res.json();
   },
+  
   async addBudget(data: any) {
     const res = await fetch(`${API_BASE_URL}/budgets`, {
       method: 'POST',
@@ -181,11 +204,13 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async deleteBudget(id: string) {
-    return fetch(`${API_BASE_URL}/budgets/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/budgets/${id}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
+    return res.json();
   },
 
   // GOALS
@@ -193,6 +218,7 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/goals`, { headers: getHeaders() });
     return res.json();
   },
+  
   async addGoal(data: any) {
     const res = await fetch(`${API_BASE_URL}/goals`, {
       method: 'POST',
@@ -201,6 +227,7 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async fundGoal(id: string, data: any) {
     const res = await fetch(`${API_BASE_URL}/goals/${id}/fund`, {
       method: 'POST',
@@ -219,20 +246,32 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/debts`, { headers: getHeaders() });
     return res.json();
   },
+    
   async addDebt(data: any) {
     const res = await fetch(`${API_BASE_URL}/debts`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi thêm khoản nợ');
+    }
     return res.json();
   },
-  async recordDebtPayment(id: string, amount: number) {
+  
+  async recordDebtPayment(id: string, amount: number, walletName: string) {
     const res = await fetch(`${API_BASE_URL}/debts/${id}/payment`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ amount })
+      body: JSON.stringify({ amount, walletName }) // Gửi thêm walletName
     });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi ghi nhận thanh toán');
+    }
     return res.json();
   },
 
@@ -241,6 +280,44 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/groups`, { headers: getHeaders() });
     return res.json();
   },
+  
+  async deleteGroup(groupId: string) {
+    const res = await fetch(`${API_BASE_URL}/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Lỗi xóa nhóm");
+    }
+    return res.json();
+  },
+
+  async leaveGroup(groupId: string) {
+      const res = await fetch(`${API_BASE_URL}/groups/${groupId}/leave`, {
+          method: 'POST',
+          headers: getHeaders()
+      });
+      if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || "Lỗi rời nhóm");
+      }
+      return res.json();
+  },
+
+  async removeMemberFromGroup(groupId: string, memberIdToRemove: string) {
+      const res = await fetch(`${API_BASE_URL}/groups/${groupId}/remove-member`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ memberIdToRemove })
+      });
+      if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || "Lỗi xóa thành viên");
+      }
+      return res.json();
+  },
+  
   async addGroup(data: any) {
     const res = await fetch(`${API_BASE_URL}/groups`, {
       method: 'POST',
@@ -249,17 +326,23 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
+  async getGroupTransactions(groupId: string) {
+    const res = await fetch(`${API_BASE_URL}/groups/${groupId}/transactions`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+  
   async addGroupTransaction(groupId: string, data: any) {
     try {
         if (!auth.currentUser) throw new Error("Chưa đăng nhập");
 
-        // Firebase hỗ trợ Sub-collection (Collection lồng trong Document)
-        // Đường dẫn sẽ là: groups -> [ID Nhóm] -> transactions -> [ID Giao dịch]
         const subColRef = collection(db, "groups", groupId, "transactions");
 
         const newTx = {
             ...data,
-            createdBy: auth.currentUser.uid, // Người chi tiền (hoặc người nhập)
+            createdBy: auth.currentUser.uid,
             createdAt: new Date().toISOString()
         };
 
@@ -270,25 +353,14 @@ async signup(name: string, email: string, password: string) {
         throw error;
     }
   },
-
-  // 4. Hàm lấy giao dịch của 1 nhóm cụ thể (Để hiển thị chi tiết)
-  // Lấy danh sách giao dịch trong sub-collection của 1 nhóm
-  async getGroupTransactions(groupId: string) {
-      // Trỏ vào: groups -> [ID] -> transactions
-      const subColRef = collection(db, "groups", groupId, "transactions");
-      // Sắp xếp theo ngày tạo mới nhất
-      const q = query(subColRef, orderBy("createdAt", "desc"));
-      
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  },
+  
   async searchUserByEmail(email: string) {
     const res = await fetch(`${API_BASE_URL}/users/search`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ email })
     });
-    if (res.status === 404) return null; // Không tìm thấy
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error('Lỗi tìm kiếm');
     return res.json();
   },
@@ -311,6 +383,7 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/categories`, { headers: getHeaders() });
     return res.json();
   },
+  
   async addCategory(data: any) {
     const res = await fetch(`${API_BASE_URL}/categories`, {
       method: 'POST',
@@ -319,14 +392,22 @@ async signup(name: string, email: string, password: string) {
     });
     return res.json();
   },
+  
   async editCategory(name: string, data: any) {
-    return { success: true }; // Giả lập
+    const res = await fetch(`${API_BASE_URL}/categories/${name}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
   },
+  
   async deleteCategory(name: string, reassignTo: string) {
-    return fetch(`${API_BASE_URL}/categories/${name}?reassignTo=${reassignTo}`, {
+    const res = await fetch(`${API_BASE_URL}/categories/${name}?reassignTo=${reassignTo}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
+    return res.json();
   },
 
   // NOTIFICATIONS
@@ -334,12 +415,15 @@ async signup(name: string, email: string, password: string) {
     const res = await fetch(`${API_BASE_URL}/notifications`, { headers: getHeaders() });
     return res.json();
   },
+  
   async markNotificationsRead() {
-    return fetch(`${API_BASE_URL}/notifications/mark-read`, {
+    const res = await fetch(`${API_BASE_URL}/notifications/mark-read`, {
       method: 'POST',
       headers: getHeaders()
     });
+    return res.json();
   },
+  
   async sendNotification(data: any) {
     const res = await fetch(`${API_BASE_URL}/admin/broadcast`, {
       method: 'POST',
@@ -353,13 +437,14 @@ async signup(name: string, email: string, password: string) {
     }
     
     return res.json();
-},
+  },
 
   // ADMIN
   async adminGetUsers() {
     const res = await fetch(`${API_BASE_URL}/admin/users`, { headers: getHeaders() });
     return res.json();
   },
+  
   async adminToggleUserLock(id: string) {
     const res = await fetch(`${API_BASE_URL}/admin/users/${id}/toggle-lock`, {
       method: 'POST',
@@ -388,18 +473,36 @@ async signup(name: string, email: string, password: string) {
     
     return res.json();
   },
+  
+  async restoreSystem(backupId: string) {
+      const res = await fetch(`${API_BASE_URL}/admin/backups/${backupId}/restore`, {
+          method: 'POST',
+          headers: getHeaders()
+      });
+      if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || "Lỗi khôi phục hệ thống");
+      }
+      return res.json();
+  },
+
+  async getSystemBackups() {
+      const res = await fetch(`${API_BASE_URL}/admin/backups`, {
+          headers: getHeaders()
+      });
+      return res.json();
+  },
+
+  async createSystemBackup() {
+      const res = await fetch(`${API_BASE_URL}/admin/backups`, {
+          method: 'POST',
+          headers: getHeaders()
+      });
+      if (!res.ok) throw new Error("Không thể tạo sao lưu");
+      return res.json();
+  },
 
   // AI
-  // async chatWithAI(message: string, context: any) {
-  //   const res = await fetch(`${API_BASE_URL}/ai/chat`, {
-  //     method: 'POST',
-  //     headers: getHeaders(),
-  //     body: JSON.stringify({ message, context })
-  //   });
-  //   return res.json();
-  // }
-
-  // AI Chat
   async chatWithAI(message: string, context: any) {
     console.log("Calling AI chat endpoint with message:", message);
     
@@ -424,12 +527,12 @@ async signup(name: string, email: string, password: string) {
     return data;
   },
 
-  // AI premium
   async getAIAnalysis() {
     const res = await fetch(`${API_BASE_URL}/ai/analysis`, { headers: getHeaders() });
     if (!res.ok) throw new Error("Lỗi phân tích AI");
     return res.json();
   },
+  
   async loginWithGoogle(idToken: string) {
     const res = await fetch(`${API_BASE_URL}/auth/google`, {
         method: 'POST',
@@ -447,12 +550,11 @@ async signup(name: string, email: string, password: string) {
   async setPassword(newPassword: string) {
       const res = await fetch(`${API_BASE_URL}/auth/set-password`, {
           method: 'POST',
-          headers: getHeaders(), // Cần token để biết đang đổi pass cho ai
+          headers: getHeaders(),
           body: JSON.stringify({ newPassword })
       });
 
       if (!res.ok) throw new Error("Lỗi đặt mật khẩu");
       return res.json();
-  }
+  },
 };
-

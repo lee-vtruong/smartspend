@@ -132,6 +132,7 @@
     "settleTitle": "Cách đơn giản nhất để thanh toán:",
     "allSettled": "Mọi người đều đã sòng phẳng!",
     "addTransactionButton": "Thêm Giao dịch",
+    "formerMember": "Thành viên cũ (Đã rời nhóm)",
     "noGroups": {
         "title": "Bắt đầu quản lý chi tiêu nhóm",
         "description": "Tạo một nhóm mới để theo dõi chi phí cho chuyến đi, sự kiện hoặc dự án tiếp theo của bạn.",
@@ -271,7 +272,16 @@
     "dueDate": "Hạn chót",
     "recordPaymentButton": "Ghi thanh toán",
     "noDebts": "Bạn không có khoản nợ nào.",
-    "noLoans": "Bạn không có khoản cho vay nào."
+    "noLoans": "Bạn không có khoản cho vay nào.",
+    "addDebtTitle": "Thêm khoản Đi vay",
+    "addLoanTitle": "Thêm khoản Cho vay",
+    "debtType": "Đi vay",
+    "loanType": "Cho vay",
+    "personLabel": "Người liên quan",
+    "amountLabel": "Số tiền",
+    "startDateLabel": "Ngày tạo",
+    "dueDateLabel": "Hạn trả",
+    "descriptionLabel": "Mô tả / Ghi chú"
   },
   "addDebtLoan": {
     "title": "Thêm khoản Nợ / Cho vay mới",

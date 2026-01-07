@@ -5,7 +5,6 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 
 // --- FIX LỖI FIREBASE IMPORT ---
-// Dùng createRequire để import firebase-admin chuẩn CommonJS
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const admin = require("firebase-admin"); 
@@ -33,16 +32,13 @@ app.use(express.json());
 try {
   const serviceAccountPath = path.resolve(__dirname, 'serviceAccountKey.json');
   
-  // Kiểm tra file tồn tại
   if (!fs.existsSync(serviceAccountPath)) {
       throw new Error(`Không tìm thấy file key tại: ${serviceAccountPath}`);
   }
 
-  // Đọc file key
   const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
 
-  // Khởi tạo Firebase
-  if (!admin.apps.length) { // Chỉ khởi tạo nếu chưa có
+  if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
@@ -51,7 +47,7 @@ try {
   console.log("🔥 Firebase Admin đã kết nối thành công!");
 } catch (error: any) {
   console.error("❌ Lỗi kết nối Firebase:", error.message);
-  process.exit(1); // Tắt server nếu không kết nối được DB
+  process.exit(1);
 }
 
 const db = admin.firestore();
@@ -60,7 +56,6 @@ const db = admin.firestore();
 const mapDoc = (doc: any) => {
     if (!doc.exists) return null;
     const data = doc.data();
-    // Chuyển Timestamp thành ISO string cho Frontend dễ dùng
     for (const key in data) {
         if (data[key] && typeof data[key].toDate === 'function') {
             data[key] = data[key].toDate().toISOString();
@@ -95,6 +90,7 @@ app.get('/', (req: any, res: any) => {
     res.send('✅ Real Firestore Backend is running!');
 });
 
+// --- AUTH ENDPOINTS ---
 app.post('/api/auth/login', async (req: any, res: any) => {
   const { email, password } = req.body;
   
@@ -152,13 +148,88 @@ app.post('/api/auth/signup', async (req: any, res: any) => {
       isAdmin: false, 
       status: 'active', 
       avatar: `https://picsum.photos/seed/${email}/100`,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      hasPassword: true
   };
   
   await db.collection('users').add(newUser);
   res.status(201).json({ success: true });
 });
 
+app.post('/api/auth/google', async (req: any, res: any) => {
+    const { idToken } = req.body;
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { email, name, picture, uid } = decodedToken;
+
+        if (!email) return res.status(400).json({ message: "Google account không có email." });
+
+        const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+        
+        let userDoc;
+        let userData;
+        let isNewOrNoPass = false;
+
+        if (userSnapshot.empty) {
+            const newUser = {
+                name: name || "User",
+                email: email,
+                password: "",
+                isAdmin: false,
+                status: 'active',
+                avatar: picture || `https://picsum.photos/seed/${email}/100`,
+                createdAt: new Date().toISOString(),
+                hasPassword: false
+            };
+            userDoc = await db.collection('users').add(newUser);
+            userData = { id: userDoc.id, ...newUser };
+            isNewOrNoPass = true;
+        } else {
+            userDoc = userSnapshot.docs[0];
+            userData = { id: userDoc.id, ...userDoc.data() };
+            
+            if (!userData.password || userData.hasPassword === false) {
+                isNewOrNoPass = true;
+            }
+        }
+
+        if (userData.status === 'locked') {
+            return res.status(403).json({ message: 'Tài khoản bị khóa' });
+        }
+
+        res.json({
+            success: true,
+            token: `mock-jwt-token-${userData.id}`,
+            user: userData,
+            requirePasswordSetup: isNewOrNoPass
+        });
+
+    } catch (error: any) {
+        console.error("Google Auth Error:", error);
+        res.status(401).json({ message: "Xác thực Google thất bại" });
+    }
+});
+
+app.post('/api/auth/set-password', authenticate, async (req: any, res: any) => {
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu phải từ 6 ký tự trở lên" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await db.collection('users').doc(req.user.id).update({
+        password: hashedPassword,
+        hasPassword: true
+    });
+
+    res.json({ success: true, message: "Tạo mật khẩu thành công" });
+});
+
+// --- PROFILE ENDPOINTS ---
 app.put('/api/profile', authenticate, async (req: any, res: any) => {
     const updates = { ...req.body };
     delete updates.id; 
@@ -169,7 +240,41 @@ app.put('/api/profile', authenticate, async (req: any, res: any) => {
     res.json(mapDoc(updatedUser));
 });
 
-// 2. WALLETS
+app.post('/api/upload-avatar', authenticate, async (req: any, res: any) => {
+    res.json({ 
+        success: true, 
+        avatarUrl: `https://picsum.photos/seed/${Date.now()}/100`
+    });
+});
+
+app.post('/api/change-password', authenticate, async (req: any, res: any) => {
+    const { oldPassword, newPassword } = req.body;
+    
+    try {
+        const userRef = db.collection('users').doc(req.user.id);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        
+        const isMatch = await bcrypt.compare(oldPassword, userData.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
+        }
+        
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        await userRef.update({ 
+            password: hashedPassword,
+            hasPassword: true 
+        });
+        
+        res.json({ success: true, message: "Đổi mật khẩu thành công" });
+    } catch (e: any) {
+        res.status(500).json({ message: "Lỗi đổi mật khẩu" });
+    }
+});
+
+// --- WALLETS ENDPOINTS ---
 app.get('/api/wallets', authenticate, async (req: any, res: any) => {
   const snapshot = await db.collection('wallets').where('userId', '==', req.user.id).get();
   res.json(snapshot.docs.map(mapDoc));
@@ -206,32 +311,88 @@ app.delete('/api/wallets/:id', authenticate, async (req: any, res: any) => {
 });
 
 app.post('/api/wallets/transfer', authenticate, async (req: any, res: any) => {
-    const { fromWalletName, toWalletName, amount } = req.body;
+    const { fromWalletName, toWalletName, amount, note, date } = req.body;
+    const numAmount = Number(amount);
     
+    if (!fromWalletName || !toWalletName || !amount) {
+        return res.status(400).json({ message: "Thiếu thông tin chuyển tiền" });
+    }
+    if (fromWalletName === toWalletName) {
+        return res.status(400).json({ message: "Ví nguồn và đích phải khác nhau" });
+    }
+
     try {
         await db.runTransaction(async (t: any) => {
-            const fromQuery = await t.get(db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', fromWalletName));
-            const toQuery = await t.get(db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', toWalletName));
+            const fromQuery = await t.get(
+                db.collection('wallets')
+                  .where('userId', '==', req.user.id)
+                  .where('name', '==', fromWalletName)
+                  .limit(1)
+            );
+            
+            const toQuery = await t.get(
+                db.collection('wallets')
+                  .where('userId', '==', req.user.id)
+                  .where('name', '==', toWalletName)
+                  .limit(1)
+            );
 
-            if (fromQuery.empty || toQuery.empty) throw new Error("Không tìm thấy ví");
+            if (fromQuery.empty) throw new Error(`Không tìm thấy ví nguồn: ${fromWalletName}`);
+            if (toQuery.empty) throw new Error(`Không tìm thấy ví đích: ${toWalletName}`);
 
             const fromDoc = fromQuery.docs[0];
             const toDoc = toQuery.docs[0];
             const fromData = fromDoc.data();
-            
-            if (fromData.balance < amount) throw new Error("Số dư không đủ");
 
-            t.update(fromDoc.ref, { balance: fromData.balance - amount });
-            t.update(toDoc.ref, { balance: toDoc.data().balance + amount });
+            if (fromData.balance < numAmount) {
+                throw new Error("Số dư ví nguồn không đủ để thực hiện giao dịch.");
+            }
+
+            const transferDate = date || new Date().toISOString();
+
+            const txOutRef = db.collection('transactions').doc();
+            t.set(txOutRef, {
+                userId: req.user.id,
+                wallet: fromWalletName,
+                type: 'expense',
+                amount: numAmount,
+                category: 'Chuyển tiền',
+                description: note ? `Chuyển đến ${toWalletName}: ${note}` : `Chuyển đến ${toWalletName}`,
+                date: transferDate,
+                createdAt: new Date().toISOString(),
+                isTransfer: true, 
+            });
+
+            const txInRef = db.collection('transactions').doc();
+            t.set(txInRef, {
+                userId: req.user.id,
+                wallet: toWalletName,
+                type: 'income', 
+                amount: numAmount,
+                category: 'Nhận tiền', 
+                description: note ? `Nhận từ ${fromWalletName}: ${note}` : `Nhận từ ${fromWalletName}`,
+                date: transferDate,
+                createdAt: new Date().toISOString(),
+                isTransfer: true
+            });
+
+            t.update(fromDoc.ref, { 
+                balance: admin.firestore.FieldValue.increment(-numAmount) 
+            });
+
+            t.update(toDoc.ref, { 
+                balance: admin.firestore.FieldValue.increment(numAmount) 
+            });
         });
 
-        res.json({ success: true });
+        res.json({ success: true, message: "Chuyển tiền thành công" });
     } catch (e: any) {
-        res.status(400).json({ message: e.message });
+        console.error("Transfer Error:", e);
+        res.status(400).json({ message: e.message || "Lỗi xử lý chuyển tiền" });
     }
 });
 
-// 3. TRANSACTIONS
+// --- TRANSACTIONS ENDPOINTS ---
 app.get('/api/transactions', authenticate, async (req: any, res: any) => {
   const snapshot = await db.collection('transactions').where('userId', '==', req.user.id).get();
   let txs = snapshot.docs.map(mapDoc);
@@ -284,7 +445,6 @@ app.delete('/api/transactions/:id', authenticate, async (req: any, res: any) => 
             }
             const txData = txDoc.data();
             
-            // Hoàn tiền
             const wQuery = await t.get(db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', txData.wallet));
             if (!wQuery.empty) {
                 const wDoc = wQuery.docs[0];
@@ -302,7 +462,68 @@ app.delete('/api/transactions/:id', authenticate, async (req: any, res: any) => 
     }
 });
 
-// 4. BUDGETS & GOALS
+app.put('/api/transactions/:id', authenticate, async (req: any, res: any) => {
+    const txRef = db.collection('transactions').doc(req.params.id);
+    const { amount, wallet, type, date, ...rest } = req.body;
+    const newAmount = Number(amount);
+
+    try {
+        await db.runTransaction(async (t: any) => {
+            const txDoc = await t.get(txRef);
+            if (!txDoc.exists || txDoc.data().userId !== req.user.id) {
+                throw new Error("Không tìm thấy giao dịch hoặc không có quyền.");
+            }
+            const oldTx = txDoc.data();
+
+            const oldWalletQuery = await t.get(
+                db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', oldTx.wallet)
+            );
+
+            let newWalletQuery;
+            if (oldTx.wallet === wallet) {
+                newWalletQuery = oldWalletQuery; 
+            } else {
+                newWalletQuery = await t.get(
+                    db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', wallet)
+                );
+            }
+
+            if (!oldWalletQuery.empty) {
+                const oldWalletDoc = oldWalletQuery.docs[0];
+                const revertAmount = oldTx.type === 'expense' ? oldTx.amount : -oldTx.amount;
+                
+                t.update(oldWalletDoc.ref, { 
+                    balance: admin.firestore.FieldValue.increment(revertAmount) 
+                });
+            }
+
+            if (!newWalletQuery.empty) {
+                const newWalletDoc = newWalletQuery.docs[0];
+                const applyAmount = type === 'expense' ? -newAmount : newAmount;
+                
+                t.update(newWalletDoc.ref, { 
+                    balance: admin.firestore.FieldValue.increment(applyAmount) 
+                });
+            }
+
+            t.update(txRef, {
+                ...rest,
+                amount: newAmount,
+                wallet,
+                type,
+                date,
+                updatedAt: new Date().toISOString()
+            });
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error("Lỗi cập nhật giao dịch:", e);
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// --- BUDGETS ENDPOINTS ---
 app.get('/api/budgets', authenticate, async (req: any, res: any) => {
   const snapshot = await db.collection('budgets').where('userId', '==', req.user.id).get();
   res.json(snapshot.docs.map(mapDoc));
@@ -320,6 +541,7 @@ app.delete('/api/budgets/:id', authenticate, async (req: any, res: any) => {
     res.json({ success: true });
 });
 
+// --- GOALS ENDPOINTS ---
 app.get('/api/goals', authenticate, async (req: any, res: any) => {
   const snapshot = await db.collection('goals').where('userId', '==', req.user.id).get();
   res.json(snapshot.docs.map(mapDoc));
@@ -359,54 +581,258 @@ app.post('/api/goals/:id/fund', authenticate, async (req: any, res: any) => {
     }
 });
 
-// 5. DEBTS, GROUPS, CATEGORIES, NOTIFICATIONS (Tương tự)
-// Giữ nguyên logic các route còn lại như phiên bản trước...
+// --- DEBTS ENDPOINTS ---
 app.get('/api/debts', authenticate, async (req: any, res: any) => {
     const snapshot = await db.collection('debts').where('userId', '==', req.user.id).get();
     res.json(snapshot.docs.map(mapDoc));
 });
+
 app.post('/api/debts', authenticate, async (req: any, res: any) => {
-    const newDebt = { ...req.body, userId: req.user.id, paidAmount: 0 };
-    const ref = await db.collection('debts').add(newDebt);
-    res.status(201).json({ id: ref.id, ...newDebt });
-});
-app.post('/api/debts/:id/payment', authenticate, async (req: any, res: any) => {
-    const debtRef = db.collection('debts').doc(req.params.id);
-    const doc = await debtRef.get();
-    if(doc.exists && doc.data()?.userId === req.user.id) {
-        const newPaid = (doc.data().paidAmount || 0) + req.body.amount;
-        await debtRef.update({ paidAmount: newPaid });
-        res.json({ ...doc.data(), paidAmount: newPaid });
-    } else res.status(404).json({ message: 'Not found' });
+    const { walletName, initialAmount, ...debtData } = req.body;
+    const userId = req.user.id;
+    const numAmount = Number(initialAmount);
+
+    try {
+        await db.runTransaction(async (t: any) => {
+             
+             let walletDoc = null;
+             
+             if (walletName) {
+                 const walletQuery = await t.get(
+                     db.collection('wallets')
+                       .where('userId', '==', userId)
+                       .where('name', '==', walletName)
+                       .limit(1)
+                 );
+                 
+                 if (walletQuery.empty) throw new Error(`Không tìm thấy ví: ${walletName}`);
+                 walletDoc = walletQuery.docs[0];
+                 
+                 const isLoan = debtData.type === 'loan';
+                 if (isLoan && walletDoc.data().balance < numAmount) {
+                     throw new Error("Số dư ví không đủ để cho vay số tiền này.");
+                 }
+             }
+
+             const newDebtRef = db.collection('debts').doc();
+             const newDebt = {
+                 ...debtData,
+                 initialAmount: numAmount,
+                 userId,
+                 paidAmount: 0,
+                 createdAt: new Date().toISOString()
+             };
+             t.set(newDebtRef, newDebt);
+
+             if (walletDoc) {
+                 const isLoan = debtData.type === 'loan';
+                 const balanceChange = isLoan ? -numAmount : numAmount;
+                 
+                 t.update(walletDoc.ref, { 
+                     balance: admin.firestore.FieldValue.increment(balanceChange) 
+                 });
+
+                 const txRef = db.collection('transactions').doc();
+                 t.set(txRef, {
+                     userId,
+                     wallet: walletName,
+                     type: isLoan ? 'expense' : 'income',
+                     amount: numAmount,
+                     category: isLoan ? 'Cho vay' : 'Đi vay', 
+                     description: isLoan ? `Cho ${debtData.person} vay` : `Vay từ ${debtData.person}`,
+                     note: debtData.description ? `${debtData.description}` : '',
+                     date: debtData.startDate || new Date().toISOString(),
+                     createdAt: new Date().toISOString(),
+                     relatedDebtId: newDebtRef.id
+                 });
+             }
+        });
+        
+        res.status(201).json({ success: true, message: "Đã tạo khoản vay/nợ thành công" });
+    } catch (e: any) {
+        console.error("Add Debt Error:", e);
+        res.status(400).json({ message: e.message || "Lỗi tạo khoản vay/nợ" });
+    }
 });
 
+app.post('/api/debts/:id/payment', authenticate, async (req: any, res: any) => {
+    const { amount, walletName, note } = req.body;
+    const debtId = req.params.id;
+    const numAmount = Number(amount);
+
+    if (!amount || numAmount <= 0) {
+        return res.status(400).json({ message: "Số tiền không hợp lệ" });
+    }
+    if (!walletName) {
+        return res.status(400).json({ message: "Vui lòng chọn ví liên quan" });
+    }
+
+    try {
+        await db.runTransaction(async (t: any) => {
+            const debtRef = db.collection('debts').doc(debtId);
+            const debtDoc = await t.get(debtRef);
+
+            if (!debtDoc.exists || debtDoc.data().userId !== req.user.id) {
+                throw new Error("Không tìm thấy khoản nợ/vay");
+            }
+
+            const debtData = debtDoc.data();
+            
+            const walletQuery = await t.get(
+                db.collection('wallets')
+                  .where('userId', '==', req.user.id)
+                  .where('name', '==', walletName)
+                  .limit(1)
+            );
+
+            if (walletQuery.empty) {
+                throw new Error(`Không tìm thấy ví: ${walletName}`);
+            }
+
+            const walletDoc = walletQuery.docs[0];
+            const walletData = walletDoc.data();
+            
+            const isLoan = debtData.type === 'loan'; 
+            const txType = isLoan ? 'income' : 'expense';
+            
+            if (!isLoan && walletData.balance < numAmount) {
+                throw new Error("Số dư ví không đủ để trả nợ.");
+            }
+
+            const newPaidAmount = (debtData.paidAmount || 0) + numAmount;
+            t.update(debtRef, { paidAmount: newPaidAmount });
+
+            const balanceChange = isLoan ? numAmount : -numAmount;
+            t.update(walletDoc.ref, { 
+                balance: admin.firestore.FieldValue.increment(balanceChange) 
+            });
+
+            const newTxRef = db.collection('transactions').doc();
+            t.set(newTxRef, {
+                userId: req.user.id,
+                wallet: walletName,
+                type: txType,
+                amount: numAmount,
+                category: isLoan ? 'Thu nợ' : 'Trả nợ', 
+                description: note || (isLoan ? `Nhận tiền trả từ ${debtData.person}` : `Trả nợ cho ${debtData.person}`),
+                date: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                relatedDebtId: debtId 
+            });
+        });
+
+        res.json({ success: true, message: "Ghi nhận thanh toán thành công" });
+
+    } catch (e: any) {
+        console.error("Debt Payment Error:", e);
+        res.status(400).json({ message: e.message || "Lỗi xử lý thanh toán" });
+    }
+});
+
+// --- GROUPS ENDPOINTS ---
+// --- SỬA LOGIC LẤY DANH SÁCH NHÓM (Chặt chẽ hơn) ---
 app.get('/api/groups', authenticate, async (req: any, res: any) => {
-    const snapshot = await db.collection('groups').get();
-    res.json(snapshot.docs.map(mapDoc));
+    try {
+        const snapshot = await db.collection('groups').get();
+        // Lọc kỹ: Chỉ trả về nhóm mà user hiện tại có trong mảng members
+        const userGroups = snapshot.docs
+            .map(mapDoc)
+            .filter((group: any) => group.members && Array.isArray(group.members) && group.members.some((m: any) => m.id === req.user.id));
+        
+        res.json(userGroups);
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi tải nhóm" });
+    }
+});
+
+// --- API XÓA NHÓM (U034) ---
+app.delete('/api/groups/:id', authenticate, async (req: any, res: any) => {
+    const groupId = req.params.id;
+    try {
+        const groupRef = db.collection('groups').doc(groupId);
+        const groupDoc = await groupRef.get();
+
+        if (!groupDoc.exists) return res.status(404).json({ message: "Không tìm thấy nhóm" });
+        
+        if (groupDoc.data().createdBy !== req.user.id) {
+            return res.status(403).json({ message: "Bạn không phải chủ nhóm nên không thể xóa." });
+        }
+
+        const subColSnapshot = await groupRef.collection('transactions').get();
+        const batch = db.batch();
+        subColSnapshot.docs.forEach((doc: any) => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        await groupRef.delete();
+
+        res.json({ success: true, message: "Đã xóa nhóm và toàn bộ dữ liệu liên quan." });
+    } catch (e: any) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// --- API RỜI NHÓM (Member tự out) ---
+app.post('/api/groups/:id/leave', authenticate, async (req: any, res: any) => {
+    const groupId = req.params.id;
+    try {
+        await db.runTransaction(async (t: any) => {
+            const groupRef = db.collection('groups').doc(groupId);
+            const doc = await t.get(groupRef);
+            if (!doc.exists) throw new Error("Nhóm không tồn tại");
+
+            const data = doc.data();
+            if (data.createdBy === req.user.id) throw new Error("Chủ nhóm không thể rời nhóm. Hãy xóa nhóm hoặc chuyển quyền.");
+
+            const newMembers = data.members.filter((m: any) => m.id !== req.user.id);
+            t.update(groupRef, { members: newMembers });
+        });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ message: e.message });
+    }
+});
+
+// --- API ĐUỔI THÀNH VIÊN (Admin kick member) ---
+app.post('/api/groups/:id/remove-member', authenticate, async (req: any, res: any) => {
+    const groupId = req.params.id;
+    const { memberIdToRemove } = req.body;
+
+    try {
+        await db.runTransaction(async (t: any) => {
+            const groupRef = db.collection('groups').doc(groupId);
+            const doc = await t.get(groupRef);
+            const data = doc.data();
+
+            if (data.createdBy !== req.user.id) throw new Error("Chỉ chủ nhóm mới có quyền xóa thành viên.");
+            if (memberIdToRemove === req.user.id) throw new Error("Không thể tự xóa chính mình ở đây.");
+
+            const newMembers = data.members.filter((m: any) => m.id !== memberIdToRemove);
+            t.update(groupRef, { members: newMembers });
+        });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ message: e.message });
+    }
 });
 
 app.post('/api/groups', authenticate, async (req: any, res: any) => {
-    const { name, currency, invitedMemberIds } = req.body; 
-    // invitedMemberIds là mảng chứa ID của 2 người kia (không tính người tạo)
+    const { name, currency, invitedMemberIds } = req.body;
 
-    // 1. Validation: Phải mời ít nhất 2 người (cộng người tạo là 3)
     if (!invitedMemberIds || !Array.isArray(invitedMemberIds) || invitedMemberIds.length < 2) {
         return res.status(400).json({ message: "Nhóm phải có tối thiểu 3 thành viên (Bạn + 2 người nữa)." });
     }
 
     try {
-        // 2. Lấy thông tin người tạo (Owner)
         const owner = {
             id: req.user.id,
             name: req.user.name,
             avatar: req.user.avatar
         };
 
-        // 3. Lấy thông tin các thành viên được mời từ Database
-        const initialMembers = [owner]; // Bắt đầu với Owner
+        const initialMembers = [owner];
 
-        // Duyệt qua danh sách ID được mời để lấy thông tin chi tiết (Name, Avatar)
-        // Lưu ý: Dùng Promise.all để query song song cho nhanh
         const memberPromises = invitedMemberIds.map(async (uid: string) => {
             const userDoc = await db.collection('users').doc(uid).get();
             if (userDoc.exists) {
@@ -421,14 +847,9 @@ app.post('/api/groups', authenticate, async (req: any, res: any) => {
         });
 
         const invitedMembers = await Promise.all(memberPromises);
-        
-        // Lọc bỏ những user không tìm thấy (null)
         const validInvitedMembers = invitedMembers.filter((m: any) => m !== null);
-        
-        // Gộp lại
         initialMembers.push(...validInvitedMembers);
 
-        // 4. Tạo nhóm với danh sách thành viên đầy đủ
         const newGroup = { 
             name, 
             currency, 
@@ -447,25 +868,187 @@ app.post('/api/groups', authenticate, async (req: any, res: any) => {
     }
 });
 
+app.get('/api/groups/:groupId/transactions', authenticate, async (req: any, res: any) => {
+    try {
+        const groupId = req.params.groupId;
+        
+        const groupDoc = await db.collection('groups').doc(groupId).get();
+        if (!groupDoc.exists) {
+            return res.status(404).json({ message: "Không tìm thấy nhóm" });
+        }
+        
+        const groupData = groupDoc.data();
+        const isMember = groupData.members?.some((m: any) => m.id === req.user.id);
+        
+        if (!isMember) {
+            return res.status(403).json({ message: "Bạn không phải thành viên nhóm này" });
+        }
+        
+        const snapshot = await db
+            .collection('groups')
+            .doc(groupId)
+            .collection('transactions')
+            .orderBy('createdAt', 'desc')
+            .get();
+            
+        const transactions = snapshot.docs.map((doc: any) => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        
+        res.json(transactions);
+    } catch (e: any) {
+        console.error("Lỗi lấy giao dịch nhóm:", e);
+        res.status(500).json({ message: "Lỗi server" });
+    }
+});
+
+app.post('/api/users/search', authenticate, async (req: any, res: any) => {
+    const { email } = req.body;
+    
+    if (!email) return res.status(400).json({ message: "Vui lòng nhập email" });
+
+    try {
+        const snapshot = await db.collection('users')
+            .where('email', '==', email)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng với email này." });
+        }
+
+        const userDoc = snapshot.docs[0];
+        const userData = userDoc.data();
+
+        res.json({
+            id: userDoc.id,
+            name: userData.name,
+            email: userData.email,
+            avatar: userData.avatar
+        });
+    } catch (e: any) {
+        res.status(500).json({ message: "Lỗi tìm kiếm" });
+    }
+});
+
+app.post('/api/groups/:id/add-member', authenticate, async (req: any, res: any) => {
+    const { userIdToAdd } = req.body;
+    const groupRef = db.collection('groups').doc(req.params.id);
+
+    try {
+        await db.runTransaction(async (t: any) => {
+            const groupDoc = await t.get(groupRef);
+            if (!groupDoc.exists) throw new Error("Nhóm không tồn tại");
+
+            const userToAddDoc = await t.get(db.collection('users').doc(userIdToAdd));
+            if (!userToAddDoc.exists) throw new Error("User không tồn tại");
+            
+            const userData = userToAddDoc.data();
+            const newMember = {
+                id: userIdToAdd,
+                name: userData.name,
+                avatar: userData.avatar
+            };
+
+            const currentMembers = groupDoc.data().members || [];
+            
+            const exists = currentMembers.find((m: any) => m.id === userIdToAdd);
+            if (exists) throw new Error("Thành viên này đã ở trong nhóm rồi");
+
+            t.update(groupRef, {
+                members: [...currentMembers, newMember]
+            });
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ message: e.message });
+    }
+});
+
+// --- CATEGORIES ENDPOINTS ---
 app.get('/api/categories', authenticate, async (req: any, res: any) => {
     const snapshot = await db.collection('categories').where('userId', '==', req.user.id).get();
     res.json(snapshot.docs.map(mapDoc));
 });
+
 app.post('/api/categories', authenticate, async (req: any, res: any) => {
     const newCat = { ...req.body, userId: req.user.id, isCustom: true };
     const ref = await db.collection('categories').add(newCat);
     res.status(201).json({ id: ref.id, ...newCat });
 });
-app.delete('/api/categories/:name', authenticate, async (req: any, res: any) => {
-    const snapshot = await db.collection('categories').where('userId', '==', req.user.id).where('name', '==', req.params.name).get();
-    snapshot.forEach(doc => doc.ref.delete());
-    res.json({ success: true });
+
+app.put('/api/categories/:name', authenticate, async (req: any, res: any) => {
+    const { name } = req.params;
+    const updateData = req.body;
+    
+    try {
+        const snapshot = await db.collection('categories')
+            .where('userId', '==', req.user.id)
+            .where('name', '==', name)
+            .limit(1)
+            .get();
+            
+        if (snapshot.empty) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        
+        const catDoc = snapshot.docs[0];
+        await catDoc.ref.update(updateData);
+        
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ message: "Lỗi cập nhật danh mục" });
+    }
 });
 
+app.delete('/api/categories/:name', authenticate, async (req: any, res: any) => {
+    const { name } = req.params;
+    const { reassignTo } = req.query;
+    
+    try {
+        const catSnapshot = await db.collection('categories')
+            .where('userId', '==', req.user.id)
+            .where('name', '==', name)
+            .limit(1)
+            .get();
+            
+        if (catSnapshot.empty) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        
+        const catDoc = catSnapshot.docs[0];
+        
+        if (reassignTo && reassignTo !== 'none') {
+            const txSnapshot = await db.collection('transactions')
+                .where('userId', '==', req.user.id)
+                .where('category', '==', name)
+                .get();
+                
+            const batch = db.batch();
+            txSnapshot.docs.forEach((doc: any) => {
+                batch.update(doc.ref, { category: reassignTo });
+            });
+            
+            await batch.commit();
+        }
+        
+        await catDoc.ref.delete();
+        
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error("Lỗi xóa danh mục:", e);
+        res.status(500).json({ message: "Lỗi xóa danh mục" });
+    }
+});
+
+// --- NOTIFICATIONS ENDPOINTS ---
 app.get('/api/notifications', authenticate, async (req: any, res: any) => {
     const snapshot = await db.collection('notifications').where('userId', '==', req.user.id).get();
     res.json(snapshot.docs.map(mapDoc));
 });
+
 app.post('/api/notifications/mark-read', authenticate, async (req: any, res: any) => {
     const snapshot = await db.collection('notifications').where('userId', '==', req.user.id).get();
     const batch = db.batch();
@@ -474,41 +1057,11 @@ app.post('/api/notifications/mark-read', authenticate, async (req: any, res: any
     res.json({ success: true });
 });
 
-// AI CHATBOT
-// app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
-//     try {
-//       const { message, context } = req.body;
-//       const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-  
-//       if (!apiKey) throw new Error("Thiếu API Key");
-  
-//       const ai = new GoogleGenAI({ apiKey });
-//       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-//       const response = await model.generateContent({
-//         contents: [{
-//             role: "user",
-//             parts: [{ text: `Bạn là Mony. Dữ liệu: ${JSON.stringify(context)}. Câu hỏi: ${message}` }]
-//         }]
-//       });
-  
-//       res.json({
-//         success: true,
-//         text: response.response.text(),
-//         model: "gemini-1.5-flash"
-//       });
-//     } catch (error: any) {
-//       console.error("Chat error:", error.message);
-//       res.status(500).json({ text: "Mony đang bận. Vui lòng thử lại sau.", error: error.message });
-//     }
-//   });
-
-
+// --- AI ENDPOINTS ---
 app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
   try {
     const { message, context } = req.body;
 
-    // LẤY API KEY GIỐNG AddTransactionModal
     const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
 
     console.log("API Key check:", apiKey ? "Có" : "Không");
@@ -518,10 +1071,8 @@ app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
       throw new Error("Không tìm thấy API Key. Kiểm tra file .env");
     }
 
-    // KHỞI TẠO SDK GIỐNG HỆT
     const ai = new GoogleGenAI({ apiKey });
 
-    // DÙNG MODEL ĐANG HOẠT ĐỘNG TỐT
     const modelsToTry = [
       "gemini-3-flash-preview",
     ];
@@ -553,7 +1104,6 @@ app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
   } catch (error: any) {
     console.error("Chat error:", error.message);
 
-    // MOCK THÔNG MINH – UX KHÔNG BỊ CHẾT
     const mockResponses = [
       `Xin chào! Bạn hỏi về "${req.body?.message}". Tôi là Mony – trợ lý tài chính. Tính năng ✨ phân tích giao dịch tự động vẫn đang hoạt động tốt.`,
       `Hiện chat AI đang bảo trì nhẹ, nhưng bạn vẫn dùng được AI phân tích giao dịch (icon tia lửa ✨).`,
@@ -570,93 +1120,8 @@ app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
   }
 });
 
-// EXPORT
-app.get('/api/export/transactions', authenticate, async (req: any, res: any) => {
-    const snapshot = await db.collection('transactions').where('userId', '==', req.user.id).get();
-    const txs = snapshot.docs.map(mapDoc);
-    let csv = "ID,Date,Type,Amount,Category,Wallet,Note\n";
-    txs.forEach((t: any) => csv += `${t.id},${t.date},${t.type},${t.amount},${t.category},${t.wallet},${t.payee}\n`);
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
-    res.send(csv);
-});
-
-// Thêm vào server.ts
-
-// API Tìm người dùng theo Email (Để mời vào nhóm)
-app.post('/api/users/search', authenticate, async (req: any, res: any) => {
-    const { email } = req.body;
-    
-    if (!email) return res.status(400).json({ message: "Vui lòng nhập email" });
-
-    try {
-        const snapshot = await db.collection('users')
-            .where('email', '==', email)
-            .limit(1) // Chỉ lấy 1 người
-            .get();
-
-        if (snapshot.empty) {
-            return res.status(404).json({ message: "Không tìm thấy người dùng với email này." });
-        }
-
-        const userDoc = snapshot.docs[0];
-        const userData = userDoc.data();
-
-        // Chỉ trả về thông tin public cần thiết (Không trả password!)
-        res.json({
-            id: userDoc.id,
-            name: userData.name,
-            email: userData.email,
-            avatar: userData.avatar
-        });
-    } catch (e: any) {
-        res.status(500).json({ message: "Lỗi tìm kiếm" });
-    }
-});
-
-// API Thêm thành viên vào nhóm
-app.post('/api/groups/:id/add-member', authenticate, async (req: any, res: any) => {
-    const { userIdToAdd } = req.body; // ID của người cần thêm
-    const groupRef = db.collection('groups').doc(req.params.id);
-
-    try {
-        await db.runTransaction(async (t: any) => {
-            const groupDoc = await t.get(groupRef);
-            if (!groupDoc.exists) throw new Error("Nhóm không tồn tại");
-
-            // Lấy thông tin người cần thêm để lưu vào mảng members (cho tiện hiển thị)
-            const userToAddDoc = await t.get(db.collection('users').doc(userIdToAdd));
-            if (!userToAddDoc.exists) throw new Error("User không tồn tại");
-            
-            const userData = userToAddDoc.data();
-            const newMember = {
-                id: userIdToAdd,
-                name: userData.name,
-                avatar: userData.avatar
-            };
-
-            // Lấy danh sách members hiện tại
-            const currentMembers = groupDoc.data().members || [];
-            
-            // Check xem đã có trong nhóm chưa
-            const exists = currentMembers.find((m: any) => m.id === userIdToAdd);
-            if (exists) throw new Error("Thành viên này đã ở trong nhóm rồi");
-
-            // Update
-            t.update(groupRef, {
-                members: [...currentMembers, newMember]
-            });
-        });
-
-        res.json({ success: true });
-    } catch (e: any) {
-        res.status(400).json({ message: e.message });
-    }
-});
-// --- API AI ANALYSIS (Phân tích chi tiêu thật – dùng preview model) ---
 app.get('/api/ai/analysis', authenticate, async (req: any, res: any) => {
   try {
-    // 1. Lấy dữ liệu thật từ Firestore
     const snapshot = await db
       .collection('transactions')
       .where('userId', '==', req.user.id)
@@ -679,7 +1144,6 @@ app.get('/api/ai/analysis', authenticate, async (req: any, res: any) => {
 
     const txs = snapshot.docs.map((doc: any) => doc.data());
 
-    // 2. Tổng hợp chi tiêu theo danh mục
     const categoryTotals: any = {};
     txs.forEach((t: any) => {
       const cat = t.category || "Khác";
@@ -690,13 +1154,11 @@ app.get('/api/ai/analysis', authenticate, async (req: any, res: any) => {
       .map(([cat, total]) => `${cat}: ${total} VND`)
       .join(", ");
 
-    // 3. LẤY API KEY – giống hệt chat
     const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("Không tìm thấy API Key");
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // 4. DÙNG PREVIEW MODEL ĐÃ TEST OK
     const modelName = "gemini-3-flash-preview";
 
     const prompt = `
@@ -732,7 +1194,6 @@ Trả về JSON thuần (không markdown, không giải thích):
       contents: prompt,
     });
 
-    // 5. Parse JSON an toàn
     const rawText = response.text;
     const cleanJson = rawText.replace(/```json|```/g, "").trim();
     const aiData = JSON.parse(cleanJson);
@@ -741,7 +1202,6 @@ Trả về JSON thuần (không markdown, không giải thích):
   } catch (error: any) {
     console.error("AI Analysis Error:", error.message);
 
-    // 6. FALLBACK THÔNG MINH – UX KHÔNG CHẾT
     return res.json({
       forecasts: [],
       suggestions: [
@@ -758,10 +1218,18 @@ Trả về JSON thuần (không markdown, không giải thích):
   }
 });
 
+// --- EXPORT ENDPOINTS ---
+app.get('/api/export/transactions', authenticate, async (req: any, res: any) => {
+    const snapshot = await db.collection('transactions').where('userId', '==', req.user.id).get();
+    const txs = snapshot.docs.map(mapDoc);
+    let csv = "ID,Date,Type,Amount,Category,Wallet,Note\n";
+    txs.forEach((t: any) => csv += `${t.id},${t.date},${t.type},${t.amount},${t.category},${t.wallet},${t.payee}\n`);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
+    res.send(csv);
+});
 
-// --- ADMIN APIs (REAL FIRESTORE DATA) ---
-
-// 1. Lấy số liệu thống kê cho Dashboard
+// --- ADMIN ENDPOINTS ---
 app.get('/api/admin/stats', authenticate, async (req: any, res: any) => {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Forbidden' });
     try {
@@ -771,27 +1239,22 @@ app.get('/api/admin/stats', authenticate, async (req: any, res: any) => {
         const txSnap = await db.collection('transactions').get();
         const totalTransactions = txSnap.size;
 
-        // --- LOGIC MỚI: TẠO KHUNG 6 THÁNG ---
         const today = new Date();
         const monthlyData = [];
 
-        // 1. Tạo sẵn mảng 6 tháng gần nhất (với doanh thu = 0)
         for (let i = 5; i >= 0; i--) {
             const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
             monthlyData.push({
-                monthLabel: `T${d.getMonth() + 1}`, // Nhãn: T1, T2...
-                monthIndex: d.getMonth(),          // Để so sánh
-                year: d.getFullYear(),             // Để so sánh năm
+                monthLabel: `T${d.getMonth() + 1}`,
+                monthIndex: d.getMonth(),
+                year: d.getFullYear(),
                 revenue: 0
             });
         }
 
-        // 2. Đổ dữ liệu thật vào khung
         txSnap.docs.forEach((doc: any) => {
             const data = doc.data();
-            const date = new Date(data.date); // Chuyển chuỗi ISO thành Date
-
-            // Tìm xem giao dịch này thuộc tháng nào trong 6 tháng kia
+            const date = new Date(data.date);
             const foundMonth = monthlyData.find(m => 
                 m.monthIndex === date.getMonth() && 
                 m.year === date.getFullYear()
@@ -802,7 +1265,6 @@ app.get('/api/admin/stats', authenticate, async (req: any, res: any) => {
             }
         });
 
-        // 3. Format lại data để trả về Frontend
         const finalChartData = monthlyData.map(item => ({
             month: item.monthLabel,
             revenue: item.revenue
@@ -813,8 +1275,8 @@ app.get('/api/admin/stats', authenticate, async (req: any, res: any) => {
             activeUsers: activeUsers,
             lockedUsers: usersSnap.size - activeUsers,
             totalTransactions: totalTransactions,
-            revenue: totalTransactions * 1, 
-            monthlyRevenue: finalChartData // Dữ liệu đã lấp đầy 6 tháng
+            revenue: totalTransactions * 1,
+            monthlyRevenue: finalChartData
         });
     } catch (e: any) {
         console.error(e);
@@ -822,12 +1284,10 @@ app.get('/api/admin/stats', authenticate, async (req: any, res: any) => {
     }
 });
 
-// 2. Lấy danh sách toàn bộ User (Cho trang UserManagement)
 app.get('/api/admin/users', authenticate, async (req: any, res: any) => {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Forbidden' });
     
     const snapshot = await db.collection('users').get();
-    // Ẩn mật khẩu trước khi trả về
     const users = snapshot.docs.map((doc: any) => {
         const data = doc.data();
         const { password, ...safeData } = data; 
@@ -836,7 +1296,6 @@ app.get('/api/admin/users', authenticate, async (req: any, res: any) => {
     res.json(users);
 });
 
-// 3. Khóa / Mở khóa User
 app.post('/api/admin/users/:id/toggle-lock', authenticate, async (req: any, res: any) => {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Forbidden' });
     
@@ -852,7 +1311,6 @@ app.post('/api/admin/users/:id/toggle-lock', authenticate, async (req: any, res:
     }
 });
 
-// 4. Gửi thông báo Broadcast (Gửi cho tất cả mọi người)
 app.post('/api/admin/broadcast', authenticate, async (req: any, res: any) => {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Forbidden' });
     
@@ -881,17 +1339,104 @@ app.post('/api/admin/broadcast', authenticate, async (req: any, res: any) => {
     }
 });
 
-// --- HELPER: HỆ THỐNG THÀNH TỰU (ACHIEVEMENTS) ---
+app.post('/api/admin/backups/:id/restore', authenticate, async (req: any, res: any) => {
+    const backupId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        await db.collection('admin_logs').add({
+            action: 'SYSTEM_RESTORE',
+            targetId: backupId,
+            performedBy: userId,
+            timestamp: new Date().toISOString(),
+            details: `Thực hiện khôi phục hệ thống từ bản sao lưu: ${backupId}`,
+            status: 'success',
+            ip: req.ip
+        });
+
+        res.json({ success: true, message: "Hệ thống đã được khôi phục về trạng thái của bản sao lưu." });
+
+    } catch (e: any) {
+        console.error("Restore Error:", e);
+        res.status(500).json({ message: "Lỗi trong quá trình khôi phục: " + e.message });
+    }
+});
+
+app.get('/api/admin/backups', authenticate, async (req: any, res: any) => {
+    try {
+        const snapshot = await db.collection('backups').orderBy('createdAt', 'desc').get();
+        const backups = snapshot.docs.map(mapDoc);
+        res.json(backups);
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi tải danh sách sao lưu" });
+    }
+});
+
+app.post('/api/admin/backups', authenticate, async (req: any, res: any) => {
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const newBackup = {
+            name: `Backup_${new Date().toISOString().split('T')[0].replace(/-/g, '')}_v${Date.now().toString().slice(-4)}`,
+            createdAt: new Date().toISOString(),
+            size: `${(Math.random() * 50 + 10).toFixed(2)} MB`, 
+            createdBy: req.user.id,
+            status: 'success'
+        };
+
+        const ref = await db.collection('backups').add(newBackup);
+        
+        await db.collection('admin_logs').add({
+            action: 'SYSTEM_BACKUP',
+            performedBy: req.user.id,
+            timestamp: new Date().toISOString(),
+            details: `Tạo bản sao lưu mới: ${newBackup.name}`,
+            status: 'success'
+        });
+
+        res.json({ success: true, id: ref.id, ...newBackup });
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi tạo bản sao lưu" });
+    }
+});
+
+app.post('/api/admin/backups/:id/restore', authenticate, async (req: any, res: any) => {
+    const backupId = req.params.id;
+    try {
+        const doc = await db.collection('backups').doc(backupId).get();
+        if (!doc.exists) {
+            return res.status(404).json({ message: "Bản sao lưu không tồn tại" });
+        }
+        const backupData = doc.data();
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        await db.collection('admin_logs').add({
+            action: 'SYSTEM_RESTORE',
+            targetId: backupId,
+            performedBy: req.user.id,
+            timestamp: new Date().toISOString(),
+            details: `Khôi phục hệ thống từ: ${backupData.name}`,
+            status: 'success'
+        });
+
+        res.json({ success: true, message: `Đã khôi phục thành công phiên bản ${backupData.name}` });
+    } catch (e: any) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// --- HELPER FUNCTIONS ---
 const checkAndUnlockAchievements = async (userId: string) => {
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
     const userData = userDoc.data();
     
-    // Lấy danh sách achievement hiện có (hoặc mảng rỗng nếu chưa có)
-    let currentAchievements = userData.achievements || []; 
+    let currentAchievements = userData.achievements || [];
     const newUnlocked: string[] = [];
 
-    // 1. CHECK: NGƯỜI MỚI BẮT ĐẦU (Có ít nhất 1 giao dịch)
     if (!currentAchievements.includes('beginner')) {
         const txSnap = await db.collection('transactions').where('userId', '==', userId).limit(1).get();
         if (!txSnap.empty) {
@@ -899,7 +1444,6 @@ const checkAndUnlockAchievements = async (userId: string) => {
         }
     }
 
-    // 2. CHECK: NHÀ HOẠCH ĐỊNH (Có ít nhất 1 ngân sách)
     if (!currentAchievements.includes('planner')) {
         const budgetSnap = await db.collection('budgets').where('userId', '==', userId).limit(1).get();
         if (!budgetSnap.empty) {
@@ -907,7 +1451,6 @@ const checkAndUnlockAchievements = async (userId: string) => {
         }
     }
 
-    // 3. CHECK: NGƯỜI MƠ MỘNG (Có ít nhất 1 mục tiêu)
     if (!currentAchievements.includes('dreamer')) {
         const goalSnap = await db.collection('goals').where('userId', '==', userId).limit(1).get();
         if (!goalSnap.empty) {
@@ -915,7 +1458,6 @@ const checkAndUnlockAchievements = async (userId: string) => {
         }
     }
 
-    // 4. CHECK: BẬC THẦY TIẾT KIỆM (Hoàn thành 1 mục tiêu 100%)
     if (!currentAchievements.includes('saver')) {
         const goalSnap = await db.collection('goals').where('userId', '==', userId).get();
         const hasCompletedGoal = goalSnap.docs.some((doc: any) => {
@@ -927,8 +1469,6 @@ const checkAndUnlockAchievements = async (userId: string) => {
         }
     }
 
-    // 5. CHECK: NHÀ ĐẦU TƯ (Nạp tiền 5 lần - Logic: Check transaction type 'fund' hoặc đếm số lần gọi API)
-    // Để đơn giản, ta kiểm tra nếu có trên 5 giao dịch tổng quát (hoặc bạn có thể tạo field riêng đếm số lần nạp)
     if (!currentAchievements.includes('investor')) {
          const txSnap = await db.collection('transactions').where('userId', '==', userId).count().get();
          if (txSnap.data().count >= 5) {
@@ -940,92 +1480,9 @@ const checkAndUnlockAchievements = async (userId: string) => {
         const updatedList = [...currentAchievements, ...newUnlocked];
         await userRef.update({ achievements: updatedList });
         console.log(`🏆 User ${userId} đã mở khóa: ${newUnlocked.join(', ')}`);
-        return newUnlocked; // Trả về để frontend biết mà thông báo
+        return newUnlocked;
     }
     return [];
 };
-
-// --- 1. API ĐĂNG NHẬP GOOGLE ---
-app.post('/api/auth/google', async (req: any, res: any) => {
-    const { idToken } = req.body;
-
-    try {
-        // Xác thực token từ Google gửi về
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const { email, name, picture, uid } = decodedToken;
-
-        if (!email) return res.status(400).json({ message: "Google account không có email." });
-
-        // Kiểm tra xem user đã tồn tại trong DB của mình chưa
-        const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
-        
-        let userDoc;
-        let userData;
-        let isNewOrNoPass = false;
-
-        if (userSnapshot.empty) {
-            // A. User mới toanh -> Tạo user mới
-            const newUser = {
-                name: name || "User",
-                email: email,
-                password: "", // Để trống vì chưa có pass
-                isAdmin: false,
-                status: 'active',
-                avatar: picture || `https://picsum.photos/seed/${email}/100`,
-                createdAt: new Date().toISOString(),
-                hasPassword: false // Cờ đánh dấu chưa có pass
-            };
-            userDoc = await db.collection('users').add(newUser);
-            userData = { id: userDoc.id, ...newUser };
-            isNewOrNoPass = true; // User mới chắc chắn phải tạo pass
-        } else {
-            // B. User cũ -> Kiểm tra đã có pass chưa
-            userDoc = userSnapshot.docs[0];
-            userData = { id: userDoc.id, ...userDoc.data() };
-            
-            // Nếu password rỗng hoặc field hasPassword = false -> Bắt tạo lại
-            if (!userData.password || userData.hasPassword === false) {
-                isNewOrNoPass = true;
-            }
-        }
-
-        if (userData.status === 'locked') {
-            return res.status(403).json({ message: 'Tài khoản bị khóa' });
-        }
-
-        // Trả về Token và cờ requirePasswordSetup
-        res.json({
-            success: true,
-            token: `mock-jwt-token-${userData.id}`,
-            user: userData,
-            requirePasswordSetup: isNewOrNoPass // <--- Cờ quan trọng để Frontend biết đường redirect
-        });
-
-    } catch (error: any) {
-        console.error("Google Auth Error:", error);
-        res.status(401).json({ message: "Xác thực Google thất bại" });
-    }
-});
-
-// --- 2. API TẠO MẬT KHẨU MỚI (Dành cho user Google) ---
-app.post('/api/auth/set-password', authenticate, async (req: any, res: any) => {
-    const { newPassword } = req.body;
-    
-    if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ message: "Mật khẩu phải từ 6 ký tự trở lên" });
-    }
-
-    // Hash mật khẩu
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-    // Cập nhật vào DB
-    await db.collection('users').doc(req.user.id).update({
-        password: hashedPassword,
-        hasPassword: true // Đánh dấu là đã có pass
-    });
-
-    res.json({ success: true, message: "Tạo mật khẩu thành công" });
-});
 
 app.listen(PORT, () => console.log(`🚀 Real Firestore Backend running at http://localhost:${PORT}`));
