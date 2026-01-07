@@ -26,7 +26,8 @@ app.use(cors({
     origin: [
         'http://localhost:5173', 
         'http://localhost:3000',
-        process.env.FRONTEND_URL || 'https://smartspend-frontend.vercel.app' // Link Vercel (nếu có)
+        'https://smartspend-api-pnl0.onrender.com',
+        'https://smartspend-blush.vercel.app' 
     ],
     credentials: true 
 }));
