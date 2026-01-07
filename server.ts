@@ -1077,11 +1077,11 @@ app.post('/api/notifications/mark-read', authenticate, async (req: any, res: any
 // --- AI ENDPOINTS ---
 app.post('/api/analyze-transaction', async (req: any, res: any) => {
     try {
-        // Nhận các biến từ frontend gửi xuống
         const { aiInput, categoryNames, walletNames } = req.body;
 
-        // Code khởi tạo y hệt cũ, chỉ đổi tên biến môi trường cho đúng server
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+        const ai = new GoogleGenAI({ apiKey });
         
         // --- GIỮ NGUYÊN PROMPT CŨ ---
         const prompt = `Phân tích văn bản giao dịch: "${aiInput}". 
