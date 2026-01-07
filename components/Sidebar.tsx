@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page } from '../types';
-import { HandshakeIcon } from '../constants';
+import { HandshakeIcon } from './Icons';
 import { useAppContext } from '../contexts/AppContext';
 
 const SidebarIcon: React.FC<{ icon: React.JSX.Element; text: string; active: boolean; onClick: () => void }> = ({ icon, text, active, onClick }) => (

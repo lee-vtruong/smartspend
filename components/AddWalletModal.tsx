@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import { Wallet } from '../types';
-import { WALLET_COLORS, CashIcon, BankIcon, EWalletIcon } from '../constants';
+import { CashIcon, BankIcon, EWalletIcon } from './Icons'; 
+import { WALLET_COLORS } from '../constants';
 
 interface AddWalletModalProps {
   isOpen: boolean;

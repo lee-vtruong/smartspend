@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Wallet } from '../types';
-import { CashIcon, BankIcon, EWalletIcon } from '../constants';
+import { CashIcon, BankIcon, EWalletIcon } from './Icons';
 import { useAppContext } from '../contexts/AppContext';
 
 interface EditWalletModalProps {

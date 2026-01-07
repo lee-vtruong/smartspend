@@ -3,6 +3,10 @@ import Modal from './Modal';
 import { Transaction, Wallet } from '../types';
 // Đã xóa import GoogleGenAI ở đây
 import { useAppContext } from '../contexts/AppContext';
+import { 
+    FoodIcon, ShoppingIcon, TransportIcon, BillIcon, 
+    EntertainmentIcon, SalaryIcon, DefaultIcon 
+} from './Icons';
 import { iconMap } from '../constants';
 import { apiService } from '../services/apiService'; // Thêm import này
 
@@ -82,7 +86,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
         const data = await apiService.analyzeTransaction(aiInput, categoryNames, walletNames);
         // -------------------------------------
 
-        if (!data.amount || data.amount <= 0) {
+        if (!data || !data.amount || data.amount <= 0) {
             alert("AI không thể nhận dạng. Vui lòng nhập thủ công.");
             setIsAiParsing(false);
             return;
@@ -110,11 +114,25 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
       return;
     }
 
+    // --- FIX LỖI #130 TẠI ĐÂY ---
     const catInfo = transactionCategories.find(c => c.name === category);
-    const iconName = catInfo?.iconName || 'FoodIcon';
+    const iconName = catInfo?.iconName || 'DefaultIcon'; // Fallback an toàn
+
+    // Lấy Component từ map, nếu không có thì dùng DefaultIcon
+    const IconComponent = iconMap[iconName] || DefaultIcon;
 
     if (isEditMode && onUpdate && transactionToEdit) {
-      onUpdate({ ...transactionToEdit, type, amount, category, wallet, date, payee, icon: React.createElement(iconMap[iconName], { className: 'w-6 h-6' }) });
+      onUpdate({ 
+          ...transactionToEdit, 
+          type, 
+          amount, 
+          category, 
+          wallet, 
+          date, 
+          payee, 
+          // Render Component bằng JSX thay vì React.createElement để an toàn hơn
+          icon: <IconComponent className="w-6 h-6" /> 
+      });
     } else {
       onAdd({ type, amount, category, wallet, date, payee }); 
     }
@@ -127,7 +145,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     <Modal isOpen={isOpen} onClose={onClose} title={t(isEditMode ? 'addTransaction.editTitle' : 'addTransaction.title')}>
       <div className="space-y-6">
         
-        {/* AI INPUT SECTION - GIỮ NGUYÊN Y HỆT */}
+        {/* AI INPUT SECTION */}
         {!isEditMode && (
             <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
@@ -161,7 +179,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             </div>
         )}
 
-        {/* MANUAL FORM SECTION - GIỮ NGUYÊN Y HỆT */}
+        {/* MANUAL FORM SECTION */}
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-background/50 p-1 border border-card-border">
                 <button type="button" onClick={() => setType('expense')} className={`py-2 text-center font-bold rounded-lg transition-all ${type === 'expense' ? 'bg-card shadow-sm text-danger scale-[1.02]' : 'text-muted hover:text-text'}`}>{t('addTransaction.expense')}</button>
