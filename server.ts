@@ -4,7 +4,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 
-// --- FIX LỖI FIREBASE IMPORT ---
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const admin = require("firebase-admin"); 
@@ -22,22 +21,39 @@ dotenv.config({ path: '.env' });
 const app: any = express();
 const PORT = process.env.PORT || 8000;
 
+// Cấu hình CORS: Thêm domain frontend của bạn vào đây sau khi deploy Vercel
 app.use(cors({
-    origin: 'http://localhost:3000', 
+    origin: [
+        'http://localhost:5173', 
+        'http://localhost:3000',
+        process.env.FRONTEND_URL || 'https://smartspend-frontend.vercel.app' // Link Vercel (nếu có)
+    ],
     credentials: true 
 }));
 app.use(express.json());
 
-// --- KẾT NỐI FIRESTORE ---
+// --- KẾT NỐI FIRESTORE (LOGIC MỚI: HỖ TRỢ DEPLOY) ---
 try {
-  const serviceAccountPath = path.resolve(__dirname, 'serviceAccountKey.json');
-  
-  if (!fs.existsSync(serviceAccountPath)) {
-      throw new Error(`Không tìm thấy file key tại: ${serviceAccountPath}`);
+  let serviceAccount;
+
+  // CÁCH 1: Ưu tiên đọc từ biến môi trường (Dành cho Render/Production)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+      console.log("🌍 Đang đọc credentials từ biến môi trường (Base64)...");
+      const buffer = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64');
+      serviceAccount = JSON.parse(buffer.toString('utf-8'));
+  } 
+  // CÁCH 2: Nếu không có biến môi trường, đọc file local (Dành cho Dev máy cá nhân)
+  else {
+      const serviceAccountPath = path.resolve(__dirname, 'serviceAccountKey.json');
+      if (fs.existsSync(serviceAccountPath)) {
+          console.log("💻 Đang đọc credentials từ file local...");
+          serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      } else {
+          throw new Error("Không tìm thấy Credentials! Hãy cấu hình FIREBASE_SERVICE_ACCOUNT_BASE64 hoặc file json.");
+      }
   }
 
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-
+  // Khởi tạo Firebase Admin
   if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
@@ -47,7 +63,7 @@ try {
   console.log("🔥 Firebase Admin đã kết nối thành công!");
 } catch (error: any) {
   console.error("❌ Lỗi kết nối Firebase:", error.message);
-  process.exit(1);
+  process.exit(1); // Dừng server nếu không kết nối được DB
 }
 
 const db = admin.firestore();
