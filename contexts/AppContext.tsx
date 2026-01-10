@@ -101,6 +101,9 @@ interface AppContextType {
   setTravelCurrency: (currency: CurrencyCode) => void;
   formatCurrency: (amount: number, useWalletCurrency?: boolean, currency?: string) => string;
 
+  handleEditGoal: (goal: Goal) => Promise<void>;
+  handleDeleteGoal: (id: string) => Promise<void>;
+
   // --- Notifications & Admin ---
   notifications: Notification[];
   unreadNotificationCount: number;
@@ -592,6 +595,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Đã nạp tiền tiết kiệm", "success");
   };
 
+  const handleEditGoal = async (updatedGoal: Goal) => {
+    try {
+        await apiService.updateGoal(updatedGoal);
+        await initAppData();
+        // Fallback alert nếu không có toast
+        alert("✅ Đã cập nhật mục tiêu!"); 
+    } catch (error) {
+        console.error(error);
+        alert("❌ Lỗi khi cập nhật");
+    }
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+    try {
+        await apiService.deleteGoal(id);
+        await initAppData();
+        alert("🗑️ Đã xóa mục tiêu!");
+    } catch (error) {
+        console.error(error);
+        alert("❌ Lỗi khi xóa");
+    }
+  };
+
   const handleAddDebtLoan = async (data: any) => {
     try {
       await apiService.addDebt(data);
@@ -737,7 +763,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       handleAddTransaction, handleUpdateTransaction, handleDeleteTransaction,
       handleWalletTransfer, 
       handleAddBudget, handleDeleteBudget, handleEditBudget,
-      handleAddGoal, handleFundGoal,
+      handleAddGoal, handleFundGoal, handleEditGoal, handleDeleteGoal,
       handleAddDebtLoan, handleRecordPayment,
       handleAddGroup, handleAddGroupTransaction,
       toggleUserLock,

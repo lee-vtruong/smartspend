@@ -265,6 +265,25 @@ export const apiService = {
     return res.json();
   },
 
+  updateGoal: async (goal: any) => {
+    const response = await fetch(`${API_BASE_URL}/goals/${goal.id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(goal),
+    });
+    if (!response.ok) throw new Error('Failed to update goal');
+    return response.json();
+  },
+
+  deleteGoal: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete goal');
+    return response.json();
+  },
+
   // DEBTS & LOANS
   async getDebts() {
     const res = await fetch(`${API_BASE_URL}/debts`, { headers: getHeaders() });

@@ -11,7 +11,7 @@ import Achievements from '../components/Achievements';
 import EditWalletModal from '../components/EditWalletModal';
 import { useAppContext } from '../contexts/AppContext';
 
-// --- 1. KHAI BÁO ICON TRỰC TIẾP TẠI ĐÂY (Để tránh lỗi import undefined) ---
+// --- 1. KHAI BÁO ICON TRỰC TIẾP TẠI ĐÂY ---
 
 const TrashIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -43,7 +43,6 @@ const LocalEmergencyIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-// Icon dự phòng cuối cùng
 const RescueIcon: React.FC<{className?: string}> = ({ className }) => (
     <div className={`flex items-center justify-center rounded-full bg-gray-200 text-gray-500 font-bold text-xs ${className}`} style={{ width: '24px', height: '24px' }}>
         ?
@@ -61,16 +60,13 @@ const GOAL_ICON_MAP: Record<string, any> = {
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
   const { t, formatCurrency } = useAppContext();
   
-  // Logic render an toàn cho Transaction
   let IconDisplay = <RescueIcon className="h-6 w-6" />;
   
   try {
       if (React.isValidElement(transaction.icon)) {
           IconDisplay = React.cloneElement(transaction.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-primary' });
       }
-  } catch (e) {
-      // Nếu lỗi clone, giữ nguyên RescueIcon
-  }
+  } catch (e) {}
 
   return (
     <li className="flex items-center justify-between py-3 group hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition-colors">
@@ -93,7 +89,6 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
   );
 };
 
-// --- CẬP NHẬT BUDGET PROGRESS (CÓ SỬA + XÓA) ---
 const BudgetProgress: React.FC<{ 
     budget: Budget; 
     onDelete: (id: string) => void;
@@ -116,21 +111,11 @@ const BudgetProgress: React.FC<{
       <div className="flex justify-between mb-1 items-center">
         <div className="flex items-center gap-2">
             <span className="font-bold text-sm text-text">{t(budget.category)}</span>
-            
-            {/* Action Buttons: Edit & Delete */}
             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                    onClick={() => onEdit(budget)}
-                    className="p-1 mr-1 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
-                    title="Sửa ngân sách"
-                >
+                <button onClick={() => onEdit(budget)} className="p-1 mr-1 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all" title="Sửa ngân sách">
                     <EditIcon className="w-4 h-4" />
                 </button>
-                <button 
-                    onClick={handleDeleteClick}
-                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                    title="Xóa ngân sách"
-                >
+                <button onClick={handleDeleteClick} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all" title="Xóa ngân sách">
                     <TrashIcon className="w-4 h-4" />
                 </button>
             </div>
@@ -139,14 +124,75 @@ const BudgetProgress: React.FC<{
       </div>
       
       <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2.5">
-        <div 
-          className={`h-2.5 rounded-full transition-all duration-500 ${progressColor}`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
-        ></div>
+        <div className={`h-2.5 rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
       </div>
       {isOverBudget && <p className="text-danger text-xs mt-1 text-right font-bold">{t('dashboard.overBudget')}</p>}
     </div>
   );
+};
+
+// --- COMPONENT GOAL ITEM (Bản nâng cấp có Sửa/Xóa) ---
+const GoalItem: React.FC<{ 
+    goal: Goal; 
+    onEdit: (g: Goal) => void; 
+    onDelete: (id: string) => void; 
+    onFund: (g: Goal) => void;
+}> = ({ goal, onEdit, onDelete, onFund }) => {
+    const { formatCurrency } = useAppContext();
+    const percentage = (goal.currentAmount / goal.targetAmount) * 100;
+    const isCompleted = percentage >= 100;
+    const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
+    
+    let RenderedIcon = <RescueIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
+    try {
+        if (typeof goal.icon === 'string') {
+            const MappedIcon = GOAL_ICON_MAP[goal.icon];
+            if (MappedIcon) {
+                RenderedIcon = <MappedIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
+            }
+        } else if (React.isValidElement(goal.icon)) {
+            RenderedIcon = React.cloneElement(goal.icon as React.ReactElement<any>, { 
+                className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` 
+            });
+        }
+    } catch (err) {}
+
+    const handleDeleteClick = () => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa mục tiêu này không?")) {
+            onDelete(goal.id);
+        }
+    }
+
+    return (
+      <div className="flex items-center space-x-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors group relative">
+        <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
+            {RenderedIcon}
+        </div>
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-1">
+            <span className="font-bold text-sm text-text">{goal.name || "Mục tiêu"}</span>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!isCompleted && <span className={`text-xs font-bold mr-2 ${isCompleted ? 'text-success' : 'text-primary'}`}>{Math.round(percentage || 0)}%</span>}
+                <button onClick={() => onEdit(goal)} className="p-1 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-full" title="Sửa mục tiêu">
+                    <EditIcon className="w-4 h-4" />
+                </button>
+                <button onClick={handleDeleteClick} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full" title="Xóa mục tiêu">
+                    <TrashIcon className="w-4 h-4" />
+                </button>
+            </div>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2">
+            <div className={`h-2 rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.min(percentage || 0, 100)}%` }}></div>
+          </div>
+          <p className="text-xs text-muted mt-1 text-right">{formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount || 0)}</p>
+        </div>
+        {!isCompleted &&
+            <button onClick={() => onFund(goal)} className="p-2 rounded-full text-primary bg-primary/10 hover:bg-primary hover:text-white transition-all" title="Nạp tiền">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+        }
+      </div>
+    );
 };
 
 // --- MAIN DASHBOARD ---
@@ -155,7 +201,8 @@ const Dashboard: React.FC = () => {
     wallets, transactions, budgets, goals, 
     handleAddWallet, handleEditWallet, handleDeleteWallet,
     handleAddTransaction, handleAddBudget, handleAddGoal, handleFundGoal,
-    handleDeleteBudget, handleEditBudget, // <--- LẤY HÀM TỪ CONTEXT
+    handleDeleteBudget, handleEditBudget, 
+    handleDeleteGoal, handleEditGoal,
     t, formatCurrency
   } = useAppContext();
   
@@ -164,8 +211,9 @@ const Dashboard: React.FC = () => {
   const [walletToEdit, setWalletToEdit] = useState<Wallet | null>(null);
   const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
   const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
-  const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null); // State edit budget
+  const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null);
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
+  const [goalToEdit, setGoalToEdit] = useState<Goal | null>(null);
   const [isFundGoalModalOpen, setFundGoalModalOpen] = useState(false);
   const [goalToFund, setGoalToFund] = useState<Goal | null>(null);
 
@@ -179,9 +227,7 @@ const Dashboard: React.FC = () => {
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, []);
 
   const onAddGoal = (goalData: Omit<Goal, 'id' | 'icon'> & { icon: string }) => {
@@ -189,7 +235,12 @@ const Dashboard: React.FC = () => {
     setAddGoalModalOpen(false);
   }
 
-  const onFundGoal = (goalId: string, amount: number, walletName: string) => {
+  const onFundGoalAction = (goal: Goal) => {
+      setGoalToFund(goal);
+      setFundGoalModalOpen(true);
+  }
+
+  const handleFundSubmit = (goalId: string, amount: number, walletName: string) => {
       handleFundGoal(goalId, amount, walletName);
       setFundGoalModalOpen(false);
   }
@@ -207,84 +258,19 @@ const Dashboard: React.FC = () => {
     setOpenWalletMenu(null);
   }
 
-  // --- BUDGET HANDLERS ---
-  const openAddBudget = () => {
-      setBudgetToEdit(null); // Reset mode thêm mới
-      setBudgetModalOpen(true);
-  }
+  const openAddBudget = () => { setBudgetToEdit(null); setBudgetModalOpen(true); }
+  const openEditBudget = (budget: Budget) => { setBudgetToEdit(budget); setBudgetModalOpen(true); }
 
-  const openEditBudget = (budget: Budget) => {
-      setBudgetToEdit(budget); // Set data cần sửa
-      setBudgetModalOpen(true);
-  }
-  
-  // --- 3. GOAL ITEM (FIXED) ---
-  const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
-    const percentage = (goal.currentAmount / goal.targetAmount) * 100;
-    const isCompleted = percentage >= 100;
-    const progressColor = isCompleted ? 'bg-success' : percentage > 75 ? 'bg-primary' : 'bg-accent';
-    
-    // Mặc định dùng RescueIcon
-    let RenderedIcon = <RescueIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
-
-    try {
-        if (typeof goal.icon === 'string') {
-            const MappedIcon = GOAL_ICON_MAP[goal.icon];
-            if (MappedIcon) {
-                RenderedIcon = <MappedIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
-            }
-        } else if (React.isValidElement(goal.icon)) {
-            RenderedIcon = React.cloneElement(goal.icon as React.ReactElement<any>, { 
-                className: `h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}` 
-            });
-        }
-    } catch (err) {
-        console.error("Icon render error", err);
-    }
-
-    return (
-      <div className="flex items-center space-x-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors">
-        <div className={`p-3 rounded-full ${isCompleted ? 'bg-success/20' : 'bg-primary/10'}`}>
-            {RenderedIcon}
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-bold text-sm text-text">{goal.name || "Mục tiêu"}</span>
-            <span className={`text-xs font-bold ${isCompleted ? 'text-success' : 'text-primary'}`}>
-                {isCompleted ? 'Hoàn thành' : `${Math.round(percentage || 0)}%`}
-            </span>
-          </div>
-          <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-500 ${progressColor}`}
-              style={{ width: `${Math.min(percentage || 0, 100)}%` }}
-            ></div>
-          </div>
-          <p className="text-xs text-muted mt-1 text-right">{formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount || 0)}</p>
-        </div>
-        {!isCompleted &&
-            <button 
-                onClick={() => { setGoalToFund(goal); setFundGoalModalOpen(true); }} 
-                className="p-2 rounded-full text-primary bg-primary/10 hover:bg-primary hover:text-white transition-all" 
-                title={t('dashboard.fundGoalTooltip')}
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            </button>
-        }
-      </div>
-    );
-  };
+  const openAddGoal = () => { setGoalToEdit(null); setAddGoalModalOpen(true); }
+  const openEditGoal = (goal: Goal) => { setGoalToEdit(goal); setAddGoalModalOpen(true); }
 
   return (
     <div>
-      {/* 1. FINANCIAL OVERVIEW */}
       <div className="mb-6">
           <FinancialOverviewCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* 2. LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-6">
             <Card title={t('dashboard.recentTransactions')}>
                 {transactions.length > 0 ? (
@@ -308,9 +294,7 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-4">
                   {wallets.map(w => {
                       let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
-                      if (React.isValidElement(w.icon)) {
-                          WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
-                      }
+                      if (React.isValidElement(w.icon)) WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
                       return (
                       <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
@@ -342,7 +326,6 @@ const Dashboard: React.FC = () => {
             </Card>
         </div>
 
-        {/* 3. RIGHT COLUMN */}
         <div className="space-y-6">
            <Card>
             <div className="flex justify-between items-center mb-4">
@@ -372,13 +355,13 @@ const Dashboard: React.FC = () => {
           <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.financialGoals')}</h3>
-                 <button onClick={() => setAddGoalModalOpen(true)} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                 <button onClick={openAddGoal} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </button>
             </div>
             <div className="space-y-4">
                 {goals.length > 0 ? (
-                    goals.map(g => <GoalItem key={g.id} goal={g} />)
+                    goals.map(g => <GoalItem key={g.id} goal={g} onEdit={openEditGoal} onDelete={handleDeleteGoal} onFund={onFundGoalAction} />)
                 ) : (
                     <p className="text-center text-muted py-4 text-sm">{t('dashboard.noGoals')}</p>
                 )}
@@ -397,14 +380,9 @@ const Dashboard: React.FC = () => {
       </button>
 
       <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
-      
-      {isEditWalletModalOpen && walletToEdit && (
-        <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />
-      )}
-      
+      {isEditWalletModalOpen && walletToEdit && <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />}
       <AddTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} onAdd={handleAddTransaction} wallets={wallets} />
       
-      {/* Cập nhật Modal AddBudget để hỗ trợ Edit */}
       <AddBudgetModal 
         isOpen={isBudgetModalOpen} 
         onClose={() => setBudgetModalOpen(false)} 
@@ -413,8 +391,21 @@ const Dashboard: React.FC = () => {
         onUpdate={handleEditBudget}
       />
       
-      <AddGoalModal isOpen={isAddGoalModalOpen} onClose={() => setAddGoalModalOpen(false)} onAdd={onAddGoal} />
-      <FundGoalModal isOpen={isFundGoalModalOpen} onClose={() => setFundGoalModalOpen(false)} onFund={onFundGoal} goal={goalToFund} wallets={wallets} />
+      <AddGoalModal 
+        isOpen={isAddGoalModalOpen} 
+        onClose={() => setAddGoalModalOpen(false)} 
+        onAdd={onAddGoal} 
+        goalToEdit={goalToEdit} 
+        onUpdate={handleEditGoal} 
+      />
+      
+      <FundGoalModal 
+        isOpen={isFundGoalModalOpen} 
+        onClose={() => setFundGoalModalOpen(false)} 
+        onFund={handleFundSubmit} 
+        goal={goalToFund} 
+        wallets={wallets} 
+      />
     </div>
   );
 };

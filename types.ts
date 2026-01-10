@@ -64,7 +64,8 @@ export interface Goal {
   name: string;
   targetAmount: number;
   currentAmount: number;
-  icon: React.JSX.Element;
+  icon: string | React.ReactNode; 
+  userId?: string; 
 }
 
 export interface SpendingData {

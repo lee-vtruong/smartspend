@@ -631,6 +631,42 @@ app.post('/api/goals/:id/fund', authenticate, async (req: any, res: any) => {
     }
 });
 
+app.put('/api/goals/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const { name, targetAmount, icon, currentAmount } = req.body;
+        const userId = req.user.id;
+
+        const goalRef = db.collection('goals').doc(id);
+        const doc = await goalRef.get();
+
+        if (!doc.exists || doc.data().userId !== userId) {
+            return res.status(403).json({ message: 'Không có quyền truy cập' });
+        }
+
+        // Cập nhật
+        await goalRef.update({
+            name,
+            targetAmount: Number(targetAmount),
+            currentAmount: Number(currentAmount), // Cho phép sửa cả số tiền hiện tại nếu cần
+            icon
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server" });
+    }
+});
+
+app.delete('/api/goals/:id', authenticate, async (req: any, res: any) => {
+    try {
+        await db.collection('goals').doc(req.params.id).delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server" });
+    }
+});
+
 // --- DEBTS ENDPOINTS ---
 app.get('/api/debts', authenticate, async (req: any, res: any) => {
     const snapshot = await db.collection('debts').where('userId', '==', req.user.id).get();
