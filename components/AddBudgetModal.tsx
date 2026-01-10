@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useAppContext } from '../contexts/AppContext';
-// IMPORT ICON CHUẨN
 import { DefaultIcon } from './Icons';
 import { iconMap } from '../constants';
-import { Budget } from '../types'; // Đảm bảo import type Budget
+import { Budget } from '../types';
 
 interface AddBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (budget: any) => void;
-  // --- THÊM PROPS CHO TÍNH NĂNG EDIT ---
   budgetToEdit?: Budget | null;
   onUpdate?: (budget: Budget) => void;
 }
@@ -24,52 +22,52 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
 }) => {
   const { transactionCategories, t } = useAppContext();
   
-  // Lọc chỉ lấy categories chi tiêu
   const expenseCategories = transactionCategories.filter(c => c.type === 'expense');
   
-  const [category, setCategory] = useState(expenseCategories[0]?.name || '');
-  const [limit, setLimit] = useState<number>(0);
+  // State: Dùng string cho limit để tránh lỗi nhập số 0 hoặc xóa trống bị nhảy
+  const [category, setCategory] = useState('');
+  const [limit, setLimit] = useState<string>(''); 
 
-  // --- EFFECT: TỰ ĐỘNG ĐIỀN DỮ LIỆU KHI MỞ MODAL ---
+  // --- FIX LỖI NHẢY SỐ TẠI ĐÂY ---
   useEffect(() => {
     if (isOpen) {
       if (budgetToEdit) {
-        // Chế độ Sửa: Fill data cũ
+        // Chế độ Sửa
         setCategory(budgetToEdit.category);
-        setLimit(budgetToEdit.limit);
+        setLimit(String(budgetToEdit.limit)); // Chuyển sang string để hiển thị
       } else {
-        // Chế độ Thêm: Reset form
+        // Chế độ Thêm: Reset
         setCategory(expenseCategories[0]?.name || '');
-        setLimit(0);
+        setLimit('');
       }
     }
-  }, [isOpen, budgetToEdit, expenseCategories]);
+    // QUAN TRỌNG: Bỏ 'expenseCategories' khỏi dependency để tránh reset khi app re-render
+  }, [isOpen, budgetToEdit]); 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (limit <= 0) {
+    const limitNumber = parseFloat(limit);
+
+    if (!limit || limitNumber <= 0) {
         alert("Vui lòng nhập hạn mức lớn hơn 0");
         return;
     }
 
     if (budgetToEdit && onUpdate) {
-      // --- LOGIC CẬP NHẬT ---
       onUpdate({
-        ...budgetToEdit, // Giữ nguyên ID, spent, userId...
+        ...budgetToEdit,
         category,
-        limit: Number(limit),
+        limit: limitNumber,
       });
     } else {
-      // --- LOGIC THÊM MỚI ---
       onAdd({
         category,
-        limit: Number(limit),
+        limit: limitNumber,
         spent: 0,
       });
     }
     
-    // Reset và đóng
-    setLimit(0);
+    setLimit('');
     onClose();
   };
 
@@ -77,12 +75,11 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      // Đổi tiêu đề tùy ngữ cảnh
       title={budgetToEdit ? "Chỉnh sửa ngân sách" : "Thiết lập ngân sách"}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Chọn Danh mục dạng Grid */}
+        {/* Chọn Danh mục */}
         <div>
           <label className="block text-sm font-bold text-muted mb-2">Danh mục chi tiêu</label>
           <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto custom-scrollbar p-1">
@@ -112,8 +109,8 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
             <div className="relative bg-background border border-card-border rounded-2xl p-4 flex items-center focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                 <input
                     type="number"
-                    value={limit === 0 ? '' : limit}
-                    onChange={(e) => setLimit(Number(e.target.value))}
+                    value={limit}
+                    onChange={(e) => setLimit(e.target.value)}
                     className="w-full bg-transparent text-3xl font-black text-primary outline-none placeholder-gray-300"
                     placeholder="0"
                     min="0"
@@ -136,7 +133,6 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
             type="submit"
             className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all"
           >
-            {/* Đổi text nút bấm */}
             {budgetToEdit ? "Lưu thay đổi" : "Lưu ngân sách"}
           </button>
         </div>

@@ -547,23 +547,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const handleDeleteBudget = async (id: string) => {
-    await apiService.deleteBudget(id);
-    await initAppData();
-    showToast("Đã xóa ngân sách", "success");
+    try {
+        await apiService.deleteBudget(id);
+        await initAppData();
+
+        if (typeof showToast === 'function') {
+            showToast("Đã xóa ngân sách!", "success");
+        } else {
+            alert("🗑️ Đã xóa ngân sách!");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("❌ Lỗi khi xóa ngân sách");
+    }
   };
 
   const handleEditBudget = async (updatedBudget: Budget) => {
     try {
-        // Gọi API cập nhật (Giả sử bạn có apiService.updateBudget)
-        await apiService.updateBudget(updatedBudget); 
+        await apiService.updateBudget(updatedBudget);
+        await initAppData();
         
-        // Load lại dữ liệu để UI cập nhật
-        await initAppData(); 
-        
-        showToast("Cập nhật ngân sách thành công", "success");
+        // Thử gọi Toast
+        if (typeof showToast === 'function') {
+            showToast("Đã cập nhật ngân sách!", "success");
+        } else {
+            // Fallback nếu Toast không chạy
+            alert("✅ Cập nhật thành công!");
+        }
     } catch (error) {
         console.error(error);
-        showToast("Lỗi khi cập nhật ngân sách", "error");
+        alert("❌ Lỗi khi cập nhật ngân sách");
     }
   };
 
