@@ -224,6 +224,19 @@ export const apiService = {
     return res.json();
   },
 
+  updateBudget: async (budget: any) => {
+    const response = await fetch(`${API_BASE_URL}/budgets/${budget.id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(budget),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update budget');
+    }
+    return response.json();
+  },
+
   // GOALS
   async getGoals() {
     const res = await fetch(`${API_BASE_URL}/goals`, { headers: getHeaders() });

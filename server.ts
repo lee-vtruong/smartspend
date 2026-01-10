@@ -558,6 +558,39 @@ app.delete('/api/budgets/:id', authenticate, async (req: any, res: any) => {
     res.json({ success: true });
 });
 
+app.put('/api/budgets/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const { limit, category } = req.body;
+        const userId = req.user.id;
+
+        const budgetRef = db.collection('budgets').doc(id);
+        const doc = await budgetRef.get();
+
+        // 1. Kiểm tra ngân sách có tồn tại không
+        if (!doc.exists) {
+            return res.status(404).json({ message: 'Ngân sách không tồn tại' });
+        }
+
+        // 2. Bảo mật: Kiểm tra ngân sách này có phải của User đang đăng nhập không
+        if (doc.data().userId !== userId) {
+            return res.status(403).json({ message: 'Không có quyền chỉnh sửa' });
+        }
+
+        // 3. Thực hiện Update (Chỉ cập nhật limit và category, giữ nguyên spent)
+        await budgetRef.update({
+            limit: Number(limit), // Đảm bảo lưu số
+            category: category
+        });
+
+        res.json({ id, limit, category, success: true });
+
+    } catch (error) {
+        console.error("Update budget error:", error);
+        res.status(500).json({ message: "Lỗi server khi cập nhật" });
+    }
+});
+
 // --- GOALS ENDPOINTS ---
 app.get('/api/goals', authenticate, async (req: any, res: any) => {
   const snapshot = await db.collection('goals').where('userId', '==', req.user.id).get();

@@ -13,6 +13,18 @@ import { useAppContext } from '../contexts/AppContext';
 
 // --- 1. KHAI BÁO ICON TRỰC TIẾP TẠI ĐÂY (Để tránh lỗi import undefined) ---
 
+const TrashIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const EditIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+
 const LocalLaptopIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-1.621-1.621A3 3 0 0 1 14.1 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25Z" />
@@ -81,19 +93,51 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
   );
 };
 
-const BudgetProgress: React.FC<{ budget: Budget }> = ({ budget }) => {
+// --- CẬP NHẬT BUDGET PROGRESS (CÓ SỬA + XÓA) ---
+const BudgetProgress: React.FC<{ 
+    budget: Budget; 
+    onDelete: (id: string) => void;
+    onEdit: (budget: Budget) => void; 
+}> = ({ budget, onDelete, onEdit }) => {
   const { t, formatCurrency } = useAppContext();
   const percentage = (budget.spent / budget.limit) * 100;
   const isOverBudget = percentage > 100;
   
   const progressColor = isOverBudget ? 'bg-danger' : percentage > 90 ? 'bg-danger' : (percentage > 75 ? 'bg-warning' : 'bg-success');
 
+  const handleDeleteClick = () => {
+      if (window.confirm("Bạn có chắc chắn muốn xóa ngân sách này không?")) {
+          onDelete(budget.id);
+      }
+  }
+
   return (
-    <div className="mb-2">
-      <div className="flex justify-between mb-1">
-        <span className="font-bold text-sm text-text">{t(budget.category)}</span>
+    <div className="mb-3 group relative p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+      <div className="flex justify-between mb-1 items-center">
+        <div className="flex items-center gap-2">
+            <span className="font-bold text-sm text-text">{t(budget.category)}</span>
+            
+            {/* Action Buttons: Edit & Delete */}
+            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                    onClick={() => onEdit(budget)}
+                    className="p-1 mr-1 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
+                    title="Sửa ngân sách"
+                >
+                    <EditIcon className="w-4 h-4" />
+                </button>
+                <button 
+                    onClick={handleDeleteClick}
+                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                    title="Xóa ngân sách"
+                >
+                    <TrashIcon className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
         <span className="text-xs font-medium text-muted">{formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}</span>
       </div>
+      
       <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2.5">
         <div 
           className={`h-2.5 rounded-full transition-all duration-500 ${progressColor}`}
@@ -111,6 +155,7 @@ const Dashboard: React.FC = () => {
     wallets, transactions, budgets, goals, 
     handleAddWallet, handleEditWallet, handleDeleteWallet,
     handleAddTransaction, handleAddBudget, handleAddGoal, handleFundGoal,
+    handleDeleteBudget, handleEditBudget, // <--- LẤY HÀM TỪ CONTEXT
     t, formatCurrency
   } = useAppContext();
   
@@ -119,6 +164,7 @@ const Dashboard: React.FC = () => {
   const [walletToEdit, setWalletToEdit] = useState<Wallet | null>(null);
   const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
   const [isBudgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null); // State edit budget
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isFundGoalModalOpen, setFundGoalModalOpen] = useState(false);
   const [goalToFund, setGoalToFund] = useState<Goal | null>(null);
@@ -160,6 +206,17 @@ const Dashboard: React.FC = () => {
     }
     setOpenWalletMenu(null);
   }
+
+  // --- BUDGET HANDLERS ---
+  const openAddBudget = () => {
+      setBudgetToEdit(null); // Reset mode thêm mới
+      setBudgetModalOpen(true);
+  }
+
+  const openEditBudget = (budget: Budget) => {
+      setBudgetToEdit(budget); // Set data cần sửa
+      setBudgetModalOpen(true);
+  }
   
   // --- 3. GOAL ITEM (FIXED) ---
   const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
@@ -174,7 +231,6 @@ const Dashboard: React.FC = () => {
         if (typeof goal.icon === 'string') {
             const MappedIcon = GOAL_ICON_MAP[goal.icon];
             if (MappedIcon) {
-                // Render component local (chắc chắn tồn tại)
                 RenderedIcon = <MappedIcon className={`h-6 w-6 ${isCompleted ? 'text-success' : 'text-primary'}`} />;
             }
         } else if (React.isValidElement(goal.icon)) {
@@ -251,13 +307,12 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   {wallets.map(w => {
-                     // Render Wallet Icon
-                     let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
-                     if (React.isValidElement(w.icon)) {
-                         WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
-                     }
-                     return (
-                     <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
+                      let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
+                      if (React.isValidElement(w.icon)) {
+                          WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
+                      }
+                      return (
+                      <div key={w.id} className="group relative flex items-center justify-between p-4 bg-background border border-card-border rounded-xl hover:shadow-md transition-all">
                         <div className="flex items-center">
                             <div className={`p-3 rounded-full ${w.color || 'bg-gray-200'}`}>
                                 {WalletIcon}
@@ -292,13 +347,20 @@ const Dashboard: React.FC = () => {
            <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-text">{t('dashboard.budgets')}</h3>
-                <button onClick={() => setBudgetModalOpen(true)} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                <button onClick={openAddBudget} className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </button>
             </div>
             <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
                 {budgets.length > 0 ? (
-                    budgets.map(b => <BudgetProgress key={b.id} budget={b}/>)
+                    budgets.map(b => (
+                        <BudgetProgress 
+                            key={b.id} 
+                            budget={b} 
+                            onDelete={handleDeleteBudget} 
+                            onEdit={openEditBudget}
+                        />
+                    ))
                 ) : (
                   <p className="text-center text-muted py-4 text-sm">{t('dashboard.noBudgets')}</p>
                 )}
@@ -335,11 +397,22 @@ const Dashboard: React.FC = () => {
       </button>
 
       <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
+      
       {isEditWalletModalOpen && walletToEdit && (
         <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />
       )}
+      
       <AddTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} onAdd={handleAddTransaction} wallets={wallets} />
-      <AddBudgetModal isOpen={isBudgetModalOpen} onClose={() => setBudgetModalOpen(false)} onAdd={handleAddBudget} />
+      
+      {/* Cập nhật Modal AddBudget để hỗ trợ Edit */}
+      <AddBudgetModal 
+        isOpen={isBudgetModalOpen} 
+        onClose={() => setBudgetModalOpen(false)} 
+        onAdd={handleAddBudget}
+        budgetToEdit={budgetToEdit}
+        onUpdate={handleEditBudget}
+      />
+      
       <AddGoalModal isOpen={isAddGoalModalOpen} onClose={() => setAddGoalModalOpen(false)} onAdd={onAddGoal} />
       <FundGoalModal isOpen={isFundGoalModalOpen} onClose={() => setFundGoalModalOpen(false)} onFund={onFundGoal} goal={goalToFund} wallets={wallets} />
     </div>

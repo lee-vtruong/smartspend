@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useAppContext } from '../contexts/AppContext';
 // IMPORT ICON CHUẨN
 import { DefaultIcon } from './Icons';
 import { iconMap } from '../constants';
+import { Budget } from '../types'; // Đảm bảo import type Budget
 
 interface AddBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (budget: any) => void;
+  // --- THÊM PROPS CHO TÍNH NĂNG EDIT ---
+  budgetToEdit?: Budget | null;
+  onUpdate?: (budget: Budget) => void;
 }
 
-const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose, onAdd }) => {
+const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onAdd, 
+  budgetToEdit, 
+  onUpdate 
+}) => {
   const { transactionCategories, t } = useAppContext();
   
   // Lọc chỉ lấy categories chi tiêu
@@ -20,31 +30,63 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose, onAdd 
   const [category, setCategory] = useState(expenseCategories[0]?.name || '');
   const [limit, setLimit] = useState<number>(0);
 
+  // --- EFFECT: TỰ ĐỘNG ĐIỀN DỮ LIỆU KHI MỞ MODAL ---
+  useEffect(() => {
+    if (isOpen) {
+      if (budgetToEdit) {
+        // Chế độ Sửa: Fill data cũ
+        setCategory(budgetToEdit.category);
+        setLimit(budgetToEdit.limit);
+      } else {
+        // Chế độ Thêm: Reset form
+        setCategory(expenseCategories[0]?.name || '');
+        setLimit(0);
+      }
+    }
+  }, [isOpen, budgetToEdit, expenseCategories]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (limit <= 0) {
         alert("Vui lòng nhập hạn mức lớn hơn 0");
         return;
     }
-    onAdd({
-      category,
-      limit: Number(limit),
-      spent: 0,
-    });
+
+    if (budgetToEdit && onUpdate) {
+      // --- LOGIC CẬP NHẬT ---
+      onUpdate({
+        ...budgetToEdit, // Giữ nguyên ID, spent, userId...
+        category,
+        limit: Number(limit),
+      });
+    } else {
+      // --- LOGIC THÊM MỚI ---
+      onAdd({
+        category,
+        limit: Number(limit),
+        spent: 0,
+      });
+    }
+    
+    // Reset và đóng
     setLimit(0);
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Thiết lập ngân sách">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      // Đổi tiêu đề tùy ngữ cảnh
+      title={budgetToEdit ? "Chỉnh sửa ngân sách" : "Thiết lập ngân sách"}
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Chọn Danh mục dạng Grid (An toàn & Đẹp) */}
+        {/* Chọn Danh mục dạng Grid */}
         <div>
           <label className="block text-sm font-bold text-muted mb-2">Danh mục chi tiêu</label>
           <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto custom-scrollbar p-1">
              {expenseCategories.map((cat) => {
-                 // Fallback an toàn nếu icon lỗi
                  const IconComponent = iconMap[cat.iconName || 'DefaultIcon'] || DefaultIcon;
                  return (
                     <div 
@@ -94,7 +136,8 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose, onAdd 
             type="submit"
             className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all"
           >
-            Lưu ngân sách
+            {/* Đổi text nút bấm */}
+            {budgetToEdit ? "Lưu thay đổi" : "Lưu ngân sách"}
           </button>
         </div>
       </form>

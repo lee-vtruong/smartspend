@@ -75,6 +75,7 @@ interface AppContextType {
   debtsLoans: DebtLoanItem[];
   handleAddBudget: (budget: Omit<Budget, 'id' | 'spent'>) => Promise<void>;
   handleDeleteBudget: (id: string) => Promise<void>;
+  handleEditBudget: (budget: Budget) => Promise<void>;
   handleAddGoal: (goal: Omit<Goal, 'id' | 'icon'> & { icon: string }) => Promise<void>;
   handleFundGoal: (id: string, amount: number, wallet: string) => Promise<void>;
   handleAddDebtLoan: (item: Omit<DebtLoanItem, 'id' | 'paidAmount'>) => Promise<void>;
@@ -551,6 +552,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Đã xóa ngân sách", "success");
   };
 
+  const handleEditBudget = async (updatedBudget: Budget) => {
+    try {
+        // Gọi API cập nhật (Giả sử bạn có apiService.updateBudget)
+        await apiService.updateBudget(updatedBudget); 
+        
+        // Load lại dữ liệu để UI cập nhật
+        await initAppData(); 
+        
+        showToast("Cập nhật ngân sách thành công", "success");
+    } catch (error) {
+        console.error(error);
+        showToast("Lỗi khi cập nhật ngân sách", "error");
+    }
+  };
+
   const handleAddGoal = async (data: any) => {
     await apiService.addGoal({...data, iconName: data.icon});
     await initAppData();
@@ -707,7 +723,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       handleAddWallet, handleEditWallet, handleDeleteWallet,
       handleAddTransaction, handleUpdateTransaction, handleDeleteTransaction,
       handleWalletTransfer, 
-      handleAddBudget, handleDeleteBudget,
+      handleAddBudget, handleDeleteBudget, handleEditBudget,
       handleAddGoal, handleFundGoal,
       handleAddDebtLoan, handleRecordPayment,
       handleAddGroup, handleAddGroupTransaction,
