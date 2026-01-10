@@ -228,23 +228,41 @@ app.post('/api/auth/google', async (req: any, res: any) => {
     }
 });
 
+const isStrongPassword = (password: string) => {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&        
+    /[a-z]/.test(password) &&       
+    /[0-9]/.test(password) &&       
+    /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  );
+};
+
+
 app.post('/api/auth/set-password', authenticate, async (req: any, res: any) => {
-    const { newPassword } = req.body;
-    
-    if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ message: "Mật khẩu phải từ 6 ký tự trở lên" });
-    }
+  const { newPassword } = req.body;
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+  if (!newPassword) {
+    return res.status(400).json({ message: 'Vui lòng nhập mật khẩu' });
+  }
 
-    await db.collection('users').doc(req.user.id).update({
-        password: hashedPassword,
-        hasPassword: true
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({
+      message: 'Mật khẩu phải ≥ 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
     });
+  }
 
-    res.json({ success: true, message: "Tạo mật khẩu thành công" });
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await db.collection('users').doc(req.user.id).update({
+    password: hashedPassword,
+    hasPassword: true,
+    passwordCreatedAt: new Date().toISOString(),
+  });
+
+  res.json({ success: true, message: 'Tạo mật khẩu thành công' });
 });
+
 
 // --- PROFILE ENDPOINTS ---
 app.put('/api/profile', authenticate, async (req: any, res: any) => {
