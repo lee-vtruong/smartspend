@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Card from '../components/Card';
 import { useAppContext } from '../contexts/AppContext';
 import { SUPPORTED_CURRENCIES, CURRENCY_RATES } from '../constants';
@@ -56,28 +56,59 @@ const Settings: React.FC = () => {
         toggleTravelMode, 
         setTravelCurrency,
         user,
-        updateProfile,
+        updateProfile, // This is the updated function from context
         logout,
         notificationSettings,
         updateNotificationSettings,
         t 
     } = useAppContext();
 
-    const [displayName, setDisplayName] = useState(user?.name || 'An Nguyen');
-    const [email, setEmail] = useState(user?.email || 'an.nguyen@example.com');
+    const [displayName, setDisplayName] = useState(user?.name || '');
+    const [email, setEmail] = useState(user?.email || '');
+    const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar || ''); // State for avatar preview
     const [is2faEnabled, setIs2faEnabled] = useState(false);
     const [isChangePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Ref for the hidden file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if(user) {
             setDisplayName(user.name);
             setEmail(user.email);
+            setAvatarPreview(user.avatar || '');
         }
     }, [user]);
 
-    const handleProfileUpdate = (e: React.FormEvent) => {
+    // Handle file selection
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 2MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatarPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Trigger file input click
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateProfile(displayName, email);
+        setIsLoading(true);
+        // Call updateProfile with both name and avatar (base64)
+        await updateProfile(displayName, avatarPreview);
+        setIsLoading(false);
     };
     
     const commonInputClass = "mt-1 block w-full px-3 py-2 bg-background border border-card-border rounded-md shadow-sm focus:outline-none focus:ring-1 sm:text-sm";
@@ -91,14 +122,48 @@ const Settings: React.FC = () => {
                     <Card title={t('settings.profile.title')}>
                         <form onSubmit={handleProfileUpdate} className="space-y-6">
                             <div className="flex items-center space-x-4">
-                                <img className="h-20 w-20 rounded-full object-cover" src={user?.avatar} alt="User avatar" />
+                                <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                                    {/* Avatar Display */}
+                                    <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-card-border">
+                                        {avatarPreview ? (
+                                            <img className="h-full w-full object-cover" src={avatarPreview} alt="User avatar" />
+                                        ) : (
+                                            <div className="h-full w-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary">
+                                                {displayName.charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Hover Overlay */}
+                                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <button type="button" className="px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-md hover:bg-primary/20">
+                                    <button 
+                                        type="button" 
+                                        onClick={handleAvatarClick}
+                                        className="px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-md hover:bg-primary/20 transition-colors"
+                                    >
                                         {t('settings.profile.changeAvatar')}
                                     </button>
                                     <p className="text-xs text-muted mt-2">{t('settings.profile.avatarHint')}</p>
+                                    
+                                    {/* Hidden File Input */}
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        onChange={handleFileChange} 
+                                        className="hidden" 
+                                        accept="image/*"
+                                    />
                                 </div>
                             </div>
+
                             <div>
                                 <label htmlFor="display-name" className="block text-sm font-medium text-muted">{t('settings.profile.displayName')}</label>
                                 <input
@@ -115,12 +180,22 @@ const Settings: React.FC = () => {
                                     type="email"
                                     id="email"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className={commonInputClass}
+                                    disabled // Make email read-only
+                                    className={`${commonInputClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-muted`}
                                 />
                             </div>
                             <div className="text-right">
-                                <button type="submit" className="bg-primary text-primary-content px-6 py-2 rounded-md hover:bg-primary-focus">
+                                <button 
+                                    type="submit" 
+                                    disabled={isLoading}
+                                    className={`bg-primary text-primary-content px-6 py-2 rounded-md hover:bg-primary-focus transition-all flex items-center ml-auto ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
+                                >
+                                    {isLoading && (
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    )}
                                     {t('settings.profile.saveButton')}
                                 </button>
                             </div>

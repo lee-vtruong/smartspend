@@ -47,8 +47,7 @@ interface AppContextType {
   loginWithGoogle: (idToken: string) => Promise<any>;
   setPassword: (newPassword: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (name: string, email: string) => Promise<void>;
-  handleUpdateAvatar: () => Promise<void>;
+  updateProfile: (name: string, avatar: string) => Promise<void>;
   handleResetPassword: (email: string) => Promise<void>;
   handleChangePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   toggleUserLock: (id: string) => Promise<void>;
@@ -402,19 +401,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Đã đăng xuất");
   };
 
-  const updateProfile = async (name: string, email: string) => { 
-    const updatedUser = await apiService.updateProfile({name, email}); 
-    setUser(updatedUser); 
-    localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
-    showToast("Cập nhật profile thành công", "success");
-  };
+  const updateProfile = async (name: string, avatar: string) => { 
+    try {
+        const result = await apiService.updateProfile({ name, avatar }); 
 
-  const handleUpdateAvatar = async () => { 
-    const result = await apiService.uploadAvatar(); 
-    const updatedUser = { ...user, avatar: result.avatarUrl };
-    setUser(updatedUser); 
-    localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
-    showToast("Cập nhật avatar thành công", "success");
+        const updatedUser = { ...user, ...result };
+        
+        setUser(updatedUser); 
+        localStorage.setItem('smartspend_user', JSON.stringify(updatedUser));
+        
+        if (typeof showToast === 'function') {
+            showToast("Cập nhật hồ sơ thành công", "success");
+        }
+    } catch (error) {
+        console.error(error);
+        if (typeof showToast === 'function') {
+            showToast("Lỗi cập nhật hồ sơ", "error");
+        }
+    }
   };
 
   const handleResetPassword = async (email: string) => { 
@@ -777,7 +781,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       // Auth Actions
       login, signup, logout, loginWithGoogle, setPassword,
-      updateProfile, handleUpdateAvatar, handleResetPassword, handleChangePassword,
+      updateProfile, handleResetPassword, handleChangePassword,
 
       // CRUD Actions
       fetchInitialData: initAppData,

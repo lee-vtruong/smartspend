@@ -57,13 +57,17 @@ export const apiService = {
     return res.json();
   },
 
-  async updateProfile(data: any) {
-    const res = await fetch(`${API_BASE_URL}/profile`, {
+  updateProfile: async (data: { name?: string; avatar?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/profile`, { 
       method: 'PUT',
       headers: getHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-    return res.json();
+
+    if (!response.ok) {
+      throw new Error('Failed to update profile');
+    }
+    return response.json();
   },
 
   async uploadAvatar() {
