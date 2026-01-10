@@ -487,52 +487,73 @@ app.get('/api/transactions', authenticate, async (req: any, res: any) => {
   res.json(txs);
 });
 
+// Trong server.ts
+
 app.post('/api/transactions', authenticate, async (req: any, res: any) => {
     const { wallet: walletName, type, amount, category, ...rest } = req.body;
     const numAmount = Number(amount);
     const userId = req.user.id;
     
-    let warningMessage = null; // Biến lưu cảnh báo
+    let warningMessage = null;
 
     try {
-        await db.runTransaction(async (t: any) => {
-            // 1. Xử lý Ví (Code cũ giữ nguyên)
-            const wQuery = await t.get(db.collection('wallets').where('userId', '==', userId).where('name', '==', walletName));
-            if (!wQuery.empty) {
-                const wDoc = wQuery.docs[0];
-                if (type === 'expense' && numAmount > wDoc.data().balance) {
-                    throw new Error("Số dư ví không đủ.");
-                }
-                const newBalance = type === 'expense' ? wDoc.data().balance - numAmount : wDoc.data().balance + numAmount;
-                t.update(wDoc.ref, { balance: newBalance });
-            }
+        await db.runTransaction(async (t: any) => {            
+            // 1.1. Đọc thông tin Ví
+            const wQuery = await t.get(
+                db.collection('wallets')
+                  .where('userId', '==', userId)
+                  .where('name', '==', walletName)
+            );
 
-            // 2. Xử lý Ngân sách (Logic MỚI cho TC065)
+            if (wQuery.empty) {
+                throw new Error(`Không tìm thấy ví: ${walletName}`);
+            }
+            const wDoc = wQuery.docs[0];
+            const wData = wDoc.data();
+
+            // 1.2. Đọc thông tin Ngân sách (Nếu là chi tiêu)
+            let budgetDoc = null;
+            let budgetData = null;
+
             if (type === 'expense') {
                 const budgetQuery = await t.get(
                     db.collection('budgets')
                         .where('userId', '==', userId)
                         .where('category', '==', category)
                 );
-
+                
                 if (!budgetQuery.empty) {
-                    const budgetDoc = budgetQuery.docs[0];
-                    const budgetData = budgetDoc.data();
-                    
-                    // Tính tổng chi tiêu mới
-                    const newSpent = (budgetData.spent || 0) + numAmount;
-                    
-                    // Cập nhật DB
-                    t.update(budgetDoc.ref, { spent: newSpent });
-
-                    // KIỂM TRA VƯỢT NGÂN SÁCH
-                    if (newSpent > budgetData.limit) {
-                        warningMessage = `⚠️ Cảnh báo: Bạn đã vượt quá ngân sách cho "${category}"!`;
-                    }
+                    budgetDoc = budgetQuery.docs[0];
+                    budgetData = budgetDoc.data();
                 }
             }
 
-            // 3. Tạo Transaction
+            // 2.1. Kiểm tra số dư ví
+            if (type === 'expense' && numAmount > wData.balance) {
+                throw new Error("Số dư ví không đủ để thực hiện giao dịch này.");
+            }
+            const newWalletBalance = type === 'expense' 
+                ? wData.balance - numAmount 
+                : wData.balance + numAmount;
+
+            // 2.2. Tính toán ngân sách (Nếu có)
+            let newBudgetSpent = 0;
+            if (budgetData) {
+                newBudgetSpent = (budgetData.spent || 0) + numAmount;
+                if (newBudgetSpent > budgetData.limit) {
+                    warningMessage = `⚠️ Cảnh báo: Bạn đã vượt quá ngân sách cho "${category}"!`;
+                }
+            }
+
+            // 3.1. Cập nhật Ví
+            t.update(wDoc.ref, { balance: newWalletBalance });
+
+            // 3.2. Cập nhật Ngân sách (Nếu có)
+            if (budgetDoc) {
+                t.update(budgetDoc.ref, { spent: newBudgetSpent });
+            }
+
+            // 3.3. Tạo Transaction mới
             const newTxRef = db.collection('transactions').doc();
             t.set(newTxRef, {
                 ...rest,
@@ -545,16 +566,15 @@ app.post('/api/transactions', authenticate, async (req: any, res: any) => {
             });
         });
         
-        // Trả về warning kèm theo response
         res.status(201).json({ 
             id: "temp-id", 
             ...req.body, 
             userId, 
-            warning: warningMessage // <-- Gửi warning về Client
+            warning: warningMessage 
         });
 
     } catch (e: any) {
-        console.error(e);
+        console.error("Transaction Error:", e);
         res.status(400).json({ message: e.message || "Lỗi tạo giao dịch" });
     }
 });

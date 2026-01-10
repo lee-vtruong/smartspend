@@ -270,8 +270,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6">
-          <FinancialOverviewCard />
+      <div className="pb-40 animate-fade-in"> 
+        <div className="mb-6"><FinancialOverviewCard /></div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
