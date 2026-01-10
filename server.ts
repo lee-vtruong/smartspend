@@ -815,8 +815,61 @@ app.post('/api/debts/:id/payment', authenticate, async (req: any, res: any) => {
     }
 });
 
+app.put('/api/debts/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const { person, initialAmount, description, dueDate, startDate, type } = req.body;
+        const userId = req.user.id;
+
+        const docRef = db.collection('debts').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists || doc.data().userId !== userId) {
+            return res.status(403).json({ message: 'Không có quyền truy cập' });
+        }
+
+        const currentData = doc.data();
+
+        const updateData: any = {
+            person,
+            description,
+            dueDate,
+            startDate,
+            type
+        };
+
+        if ((currentData.paidAmount || 0) === 0) {
+            updateData.initialAmount = Number(initialAmount);
+        }
+
+        await docRef.update(updateData);
+        res.json({ success: true, message: "Cập nhật thành công" });
+    } catch (error) {
+        console.error("Update Debt Error:", error);
+        res.status(500).json({ message: "Lỗi server khi cập nhật" });
+    }
+});
+
+app.delete('/api/debts/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const docRef = db.collection('debts').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists || doc.data().userId !== userId) {
+            return res.status(403).json({ message: 'Không có quyền truy cập' });
+        }
+
+        await docRef.delete();
+        res.json({ success: true, message: "Đã xóa khoản nợ/vay" });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server khi xóa" });
+    }
+});
+
 // --- GROUPS ENDPOINTS ---
-// --- SỬA LOGIC LẤY DANH SÁCH NHÓM (Chặt chẽ hơn) ---
 app.get('/api/groups', authenticate, async (req: any, res: any) => {
     try {
         const snapshot = await db.collection('groups').get();

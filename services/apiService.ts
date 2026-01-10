@@ -308,13 +308,36 @@ export const apiService = {
     const res = await fetch(`${API_BASE_URL}/debts/${id}/payment`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ amount, walletName }) // Gửi thêm walletName
+      body: JSON.stringify({ amount, walletName })
     });
     
     if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Lỗi ghi nhận thanh toán');
     }
+    return res.json();
+  },
+
+  async updateDebtLoan(id: string, data: any) {
+    const res = await fetch(`${API_BASE_URL}/debts/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi cập nhật khoản nợ');
+    }
+    return res.json();
+  },
+
+  // MỚI: Xóa khoản nợ
+  async deleteDebtLoan(id: string) {
+    const res = await fetch(`${API_BASE_URL}/debts/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete debt');
     return res.json();
   },
 

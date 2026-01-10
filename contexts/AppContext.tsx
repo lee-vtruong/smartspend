@@ -80,6 +80,8 @@ interface AppContextType {
   handleFundGoal: (id: string, amount: number, wallet: string) => Promise<void>;
   handleAddDebtLoan: (item: Omit<DebtLoanItem, 'id' | 'paidAmount'>) => Promise<void>;
   handleRecordPayment: (id: string, amount: number, walletName: string) => Promise<void>;
+  handleEditDebtLoan: (id: string, data: any) => Promise<void>;
+  handleDeleteDebtLoan: (id: string) => Promise<void>;
 
   // --- Features: Groups, Chatbot, Achievements, Travel ---
   groups: any[];
@@ -630,6 +632,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const handleEditDebtLoan = async (id: string, updatedData: any) => {
+    try { 
+        await apiService.updateDebtLoan(id, updatedData);
+        await initAppData(); // Refresh data
+        showToast("✅ Cập nhật khoản nợ thành công!", "success");
+    } catch (error: any) {
+        showToast(error.message || "❌ Lỗi khi cập nhật", "error");
+    }
+  };
+
+  const handleDeleteDebtLoan = async (id: string) => {
+    try {
+        await apiService.deleteDebtLoan(id);
+        await initAppData(); // Refresh data
+        showToast("🗑️ Đã xóa khoản nợ vĩnh viễn", "success");
+    } catch (error: any) {
+        showToast("❌ Không thể xóa bản ghi", "error");
+    }
+  };
+
   const handleRecordPayment = async (id: string, amount: number, walletName: string) => {
     try {
         await apiService.recordDebtPayment(id, amount, walletName);
@@ -764,7 +786,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       handleWalletTransfer, 
       handleAddBudget, handleDeleteBudget, handleEditBudget,
       handleAddGoal, handleFundGoal, handleEditGoal, handleDeleteGoal,
-      handleAddDebtLoan, handleRecordPayment,
+      handleAddDebtLoan, handleRecordPayment, handleEditDebtLoan, handleDeleteDebtLoan,
       handleAddGroup, handleAddGroupTransaction,
       toggleUserLock,
       handleAddCategory, handleEditCategory, handleDeleteCategory,

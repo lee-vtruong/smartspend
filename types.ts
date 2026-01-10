@@ -161,8 +161,9 @@ export interface DebtLoanItem {
   initialAmount: number;
   paidAmount: number;
   description: string;
-  dueDate: string;
-  interestRate?: number; // Optional interest rate
+  startDate?: string;
+  dueDate?: string;
+  interestRate?: number; 
 }
 
 // Admin Types
