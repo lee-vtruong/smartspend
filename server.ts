@@ -490,34 +490,51 @@ app.get('/api/transactions', authenticate, async (req: any, res: any) => {
 app.post('/api/transactions', authenticate, async (req: any, res: any) => {
     const { wallet: walletName, type, amount, ...rest } = req.body;
     const numAmount = Number(amount);
+    const userId = req.user.id; // Đảm bảo lấy userId từ token
 
     try {
         await db.runTransaction(async (t: any) => {
-            const wQuery = await t.get(db.collection('wallets').where('userId', '==', req.user.id).where('name', '==', walletName));
-            
-            if (!wQuery.empty) {
-                const wDoc = wQuery.docs[0];
-                const newBalance = type === 'expense' 
-                    ? wDoc.data().balance - numAmount 
-                    : wDoc.data().balance + numAmount;
-                t.update(wDoc.ref, { balance: newBalance });
+            // 1. Tìm ví trong Database
+            const wQuery = await t.get(db.collection('wallets').where('userId', '==', userId).where('name', '==', walletName));
+
+            if (wQuery.empty) {
+                throw new Error(`Không tìm thấy ví: ${walletName}`);
             }
 
+            const wDoc = wQuery.docs[0];
+            const currentBalance = wDoc.data().balance;
+
+            // --- FIX TC030: KIỂM TRA SỐ DƯ TẠI BACKEND ---
+            // Nếu là khoản chi (expense) và số tiền chi lớn hơn số dư hiện có -> Báo lỗi
+            if (type === 'expense' && numAmount > currentBalance) {
+                throw new Error("Số dư ví không đủ để thực hiện giao dịch này.");
+            }
+            // ---------------------------------------------
+
+            // 2. Cập nhật số dư ví
+            const newBalance = type === 'expense' 
+                ? currentBalance - numAmount 
+                : currentBalance + numAmount;
+            t.update(wDoc.ref, { balance: newBalance });
+
+            // 3. Tạo Transaction mới
             const newTxRef = db.collection('transactions').doc();
             t.set(newTxRef, {
                 ...rest,
                 wallet: walletName,
                 type,
                 amount: numAmount,
-                userId: req.user.id,
+                userId,
                 date: req.body.date || new Date().toISOString()
             });
         });
         
-        res.status(201).json({ id: "temp-id", ...req.body, userId: req.user.id });
+        res.status(201).json({ id: "temp-id", ...req.body, userId }); // Trả về thành công
+
     } catch (e: any) {
         console.error(e);
-        res.status(500).json({ message: "Lỗi tạo giao dịch" });
+        // Trả về mã lỗi 400 (Bad Request) cùng thông báo cụ thể để Frontend hiển thị
+        res.status(400).json({ message: e.message || "Lỗi tạo giao dịch" });
     }
 });
 

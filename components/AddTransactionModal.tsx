@@ -114,7 +114,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
       return;
     }
 
-    // --- FIX LỖI #130 TẠI ĐÂY ---
+    if (type === 'expense') {
+        // Tìm ví đang được chọn trong danh sách wallets (được truyền vào qua props)
+        const selectedWallet = wallets.find(w => w.name === wallet);
+        
+        if (selectedWallet) {
+            // Kiểm tra: Nếu số tiền chi > số dư hiện tại của ví
+            if (amount > selectedWallet.balance) {
+                const formattedBalance = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedWallet.balance);
+                alert(`Cảnh báo: Số dư ví "${wallet}" không đủ để chi khoản này!\nSố dư hiện tại: ${formattedBalance}`);
+                return; // Dừng lại, không cho submit form
+            }
+        }
+    }
+
     const catInfo = transactionCategories.find(c => c.name === category);
     const iconName = catInfo?.iconName || 'DefaultIcon'; // Fallback an toàn
 

@@ -200,6 +200,13 @@ export const apiService = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to add transaction');
+    }
+    // -------------------------------
+
     return res.json();
   },
   
