@@ -4,14 +4,11 @@ import Card from '../components/Card';
 import AddTransactionModal from '../components/AddTransactionModal';
 import TransferWalletModal from '../components/TransferWalletModal';
 import { useAppContext } from '../contexts/AppContext';
+import TransactionFilters, { FilterValues } from '../components/TransactionFilters';
 
-// Component con hiển thị từng dòng (Đã sửa để hiển thị Description nếu không có Payee)
 const TransactionListItem: React.FC<{ transaction: Transaction; onEdit: () => void; onDelete: () => void; }> = ({ transaction, onEdit, onDelete }) => {
     const { t, formatCurrency } = useAppContext();
-    
-    // Logic hiển thị tên: Nếu là chuyển khoản hoặc không có payee thì hiện description
     const displayTitle = transaction.payee || transaction.description || "Giao dịch không tên";
-
     return (
         <li className="group flex items-center justify-between py-4 px-4 hover:bg-primary/5 rounded-xl transition-all duration-200 mb-2 border border-transparent hover:border-primary/10">
             <div className="flex items-center">
@@ -48,25 +45,25 @@ const TransactionListItem: React.FC<{ transaction: Transaction; onEdit: () => vo
 
 const TransactionsPage: React.FC = () => {
     const { 
-        transactions, 
-        wallets, 
-        handleUpdateTransaction, 
-        handleDeleteTransaction, 
-        handleWalletTransfer, 
-        handleAddTransaction,
-        transactionCategories,
-        t,
-        formatCurrency 
+        transactions, wallets, handleUpdateTransaction, handleDeleteTransaction, 
+        handleWalletTransfer, handleAddTransaction, transactionCategories, t, formatCurrency 
     } = useAppContext();
 
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
     const [isTransferModalOpen, setTransferModalOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [showAdvancedFilter, setShowAdvancedFilter] = useState(false); // Toggle bộ lọc nâng cao
     
+    // Các state lọc cơ bản
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterWallet, setFilterWallet] = useState('all');
+
+    // 2. STATE CHO BỘ LỌC NÂNG CAO (DATE & AMOUNT)
+    const [advancedFilters, setAdvancedFilters] = useState<FilterValues>({
+        startDate: '', endDate: '', minAmount: '', maxAmount: ''
+    });
 
     const handleEdit = (transaction: Transaction) => {
         setSelectedTransaction(transaction);
@@ -79,30 +76,42 @@ const TransactionsPage: React.FC = () => {
         }
     };
     
-    // --- ĐOẠN SỬA LỖI QUAN TRỌNG NHẤT ---
+    // --- 3. CẬP NHẬT LOGIC LỌC TRONG USEMEMO ---
     const filteredTransactions = useMemo(() => {
         return transactions.filter(t => {
+            // Lọc cơ bản (Search, Category, Wallet)
             const term = searchTerm.toLowerCase();
-            
-            // Sử dụng ( || '') để bảo vệ nếu trường dữ liệu bị thiếu
-            // Tìm kiếm cả trong payee và description
             const payee = (t.payee || '').toLowerCase();
             const desc = (t.description || '').toLowerCase();
             const cat = (t.category || '').toLowerCase();
             const wal = (t.wallet || '').toLowerCase();
 
-            const matchesSearch = 
-                payee.includes(term) || 
-                desc.includes(term) || 
-                cat.includes(term) ||
-                wal.includes(term);
-
+            const matchesSearch = payee.includes(term) || desc.includes(term) || cat.includes(term) || wal.includes(term);
             const matchesCategory = filterCategory === 'all' || t.category === filterCategory;
             const matchesWallet = filterWallet === 'all' || t.wallet === filterWallet;
+
+            // Lọc nâng cao (Date)
+            let matchesDate = true;
+            if (advancedFilters.startDate) {
+                matchesDate = matchesDate && new Date(t.date) >= new Date(advancedFilters.startDate);
+            }
+            if (advancedFilters.endDate) {
+                matchesDate = matchesDate && new Date(t.date) <= new Date(advancedFilters.endDate);
+            }
+
+            // Lọc nâng cao (Amount)
+            let matchesAmount = true;
+            if (advancedFilters.minAmount) {
+                matchesAmount = matchesAmount && t.amount >= parseFloat(advancedFilters.minAmount);
+            }
+            if (advancedFilters.maxAmount) {
+                matchesAmount = matchesAmount && t.amount <= parseFloat(advancedFilters.maxAmount);
+            }
             
-            return matchesSearch && matchesCategory && matchesWallet;
+            return matchesSearch && matchesCategory && matchesWallet && matchesDate && matchesAmount;
         });
-    }, [transactions, searchTerm, filterCategory, filterWallet]);
+    }, [transactions, searchTerm, filterCategory, filterWallet, advancedFilters]);
+    
     // -------------------------------------
 
     const allCategories: TransactionCategory[] = transactionCategories;
@@ -133,7 +142,7 @@ const TransactionsPage: React.FC = () => {
         <Card className="!p-0 flex-1 flex flex-col border-white/20 shadow-2xl bg-card/60 overflow-hidden">
             {/* Filter Bar */}
             <div className="p-5 border-b border-card-border bg-card/40 backdrop-blur-md sticky top-0 z-10">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
                     <div className="md:col-span-2 relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted pointer-events-none">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -155,6 +164,22 @@ const TransactionsPage: React.FC = () => {
                         {allWallets.map(w => <option key={w} value={w}>{w}</option>)}
                     </select>
                 </div>
+                
+                {/* Nút bật/tắt bộ lọc nâng cao */}
+                <div className="flex justify-between items-center mt-2">
+                    <button 
+                        onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+                        className="text-xs font-bold text-primary hover:text-primary-focus flex items-center uppercase tracking-wider"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 transition-transform ${showAdvancedFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        {showAdvancedFilter ? "Ẩn bộ lọc nâng cao" : "Bộ lọc nâng cao (Ngày & Số tiền)"}
+                    </button>
+                </div>
+
+                {/* 4. CHÈN COMPONENT LỌC NÂNG CAO */}
+                {showAdvancedFilter && (
+                    <TransactionFilters onFilterChange={setAdvancedFilters} />
+                )}
             </div>
 
             {/* List Section */}
