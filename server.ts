@@ -329,19 +329,71 @@ app.put('/api/wallets/:id', authenticate, async (req: any, res: any) => {
         return res.status(404).json({ message: 'Not found' });
     }
 
-    await walletRef.update(req.body);
+    // Lấy dữ liệu từ body
+    const { name, balance, type, currency, color, icon } = req.body;
+
+    // Update với dữ liệu đã được validate cơ bản
+    await walletRef.update({
+        name,
+        balance: Number(balance), // Đảm bảo lưu là số
+        type,
+        currency,
+        color,
+        // icon: icon // Thường icon không lưu trực tiếp vào DB nếu là React Element, chỉ lưu tên icon
+    });
+
     const updated = await walletRef.get();
     res.json(mapDoc(updated));
 });
 
 app.delete('/api/wallets/:id', authenticate, async (req: any, res: any) => {
-    const walletRef = db.collection('wallets').doc(req.params.id);
-    const doc = await walletRef.get();
-    if (doc.exists && doc.data()?.userId === req.user.id) {
-        await walletRef.delete();
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ message: 'Not found' });
+    const walletId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        // 1. Kiểm tra ví có tồn tại không
+        const walletRef = db.collection('wallets').doc(walletId);
+        const walletDoc = await walletRef.get();
+
+        if (!walletDoc.exists || walletDoc.data()?.userId !== userId) {
+            return res.status(404).json({ message: 'Wallet not found' });
+        }
+
+        // --- ĐOẠN CODE MỚI: KIỂM TRA VÍ DUY NHẤT (FIX TC023) ---
+        const allWalletsSnapshot = await db.collection('wallets')
+            .where('userId', '==', userId)
+            .get();
+
+        if (allWalletsSnapshot.size <= 1) {
+            return res.status(400).json({ 
+                message: 'Không thể xóa ví duy nhất. Bạn cần ít nhất một ví để hoạt động.' 
+            });
+        }
+        // ---------------------------------------------------------
+
+        const walletData = walletDoc.data();
+        const walletName = walletData.name;
+
+        // 2. Thực hiện xóa (Batch logic cũ giữ nguyên)
+        const batch = db.batch();
+        batch.delete(walletRef);
+
+        const transactionsSnapshot = await db.collection('transactions')
+            .where('userId', '==', userId)
+            .where('wallet', '==', walletName) 
+            .get();
+
+        transactionsSnapshot.docs.forEach((doc: any) => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+        res.json({ success: true, message: `Đã xóa ví thành công.` });
+
+    } catch (error) {
+        console.error("Delete Wallet Error:", error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 

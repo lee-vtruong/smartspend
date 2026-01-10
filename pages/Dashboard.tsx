@@ -252,6 +252,10 @@ const Dashboard: React.FC = () => {
   }
 
   const onDeleteWallet = (walletId: string) => {
+    if (wallets.length <= 1) {
+        alert("⚠️ Không thể xóa ví này! Bạn cần giữ lại ít nhất một ví để sử dụng.");
+        return; 
+    }
     if(window.confirm(t('editWallet.deleteConfirmation'))) {
         handleDeleteWallet(walletId);
     }

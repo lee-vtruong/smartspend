@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Wallet } from '../types';
-// IMPORT CHUẨN TỪ FILE ICONS
 import { CashIcon, BankIcon, EWalletIcon } from './Icons';
-import { WALLET_COLORS } from '../constants'; // Import màu từ constants
+import { WALLET_COLORS } from '../constants';
 
 interface EditWalletModalProps {
   isOpen: boolean;
@@ -14,7 +13,7 @@ interface EditWalletModalProps {
 
 const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSave, walletToEdit }) => {
   const [name, setName] = useState('');
-  const [balance, setBalance] = useState('');
+  const [balance, setBalance] = useState(''); // Dùng string để input dễ nhập liệu
   const [type, setType] = useState<'Cash' | 'Bank' | 'E-Wallet'>('Cash');
   const [currency, setCurrency] = useState<'VND' | 'USD'>('VND');
   const [color, setColor] = useState(WALLET_COLORS[0]);
@@ -33,6 +32,12 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
     e.preventDefault();
     if (!name || !walletToEdit) return;
 
+    // Validate số dư
+    if (isNaN(parseFloat(balance))) {
+        alert("Vui lòng nhập số dư hợp lệ");
+        return;
+    }
+
     // Logic chọn icon an toàn
     let IconComponent = CashIcon;
     if (type === 'Bank') IconComponent = BankIcon;
@@ -41,11 +46,11 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
     onSave({
       ...walletToEdit,
       name,
-      balance: parseFloat(balance),
+      balance: parseFloat(balance), // Chuyển string sang number
       type,
       currency,
       color,
-      icon: <IconComponent className="w-6 h-6" /> // Render icon chuẩn
+      icon: <IconComponent className="w-6 h-6" />
     });
     onClose();
   };
@@ -59,6 +64,7 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Chỉnh sửa ví">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Input Tên Ví */}
         <div>
           <label className="block text-sm font-medium text-muted mb-1">Tên ví</label>
           <input
@@ -70,6 +76,22 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
           />
         </div>
 
+        {/* --- PHẦN MỚI THÊM: Input Số Dư (Fix TC020) --- */}
+        <div>
+          <label className="block text-sm font-medium text-muted mb-1">Số dư hiện tại</label>
+          <input
+            type="number"
+            value={balance}
+            onChange={(e) => setBalance(e.target.value)}
+            className="mt-1 block w-full px-4 py-2 bg-background border border-card-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 font-mono font-bold"
+            required
+            placeholder="0"
+          />
+          <p className="text-[11px] text-muted mt-1 italic">* Cập nhật số dư trực tiếp không tạo ra giao dịch điều chỉnh.</p>
+        </div>
+        {/* ----------------------------------------------- */}
+
+        {/* Chọn Loại Ví */}
         <div>
             <label className="block text-sm font-medium text-muted mb-2">Loại ví</label>
             <div className="grid grid-cols-3 gap-3">
@@ -87,6 +109,7 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
             </div>
         </div>
 
+        {/* Chọn Màu */}
         <div>
           <label className="block text-sm font-medium text-muted mb-2">Màu sắc</label>
           <div className="flex space-x-2 overflow-x-auto p-1">
@@ -103,7 +126,8 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
           </div>
         </div>
         
-         <div>
+        {/* Chọn Tiền Tệ */}
+        <div>
           <label className="block text-sm font-medium text-muted mb-1">Đơn vị tiền tệ</label>
           <select
             value={currency}
@@ -115,6 +139,7 @@ const EditWalletModal: React.FC<EditWalletModalProps> = ({ isOpen, onClose, onSa
           </select>
         </div>
 
+        {/* Nút Action */}
         <div className="flex justify-end pt-4 space-x-2">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Hủy</button>
           <button type="submit" className="px-6 py-2 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700">Lưu thay đổi</button>

@@ -137,14 +137,6 @@ export const apiService = {
     return res.json();
   },
   
-  async deleteWallet(id: string) {
-    const res = await fetch(`${API_BASE_URL}/wallets/${id}`, {
-      method: 'DELETE',
-      headers: getHeaders()
-    });
-    return res.json();
-  },
-  
   async editWallet(id: string, data: any) {
     const res = await fetch(`${API_BASE_URL}/wallets/${id}`, {
       method: 'PUT',
@@ -152,6 +144,34 @@ export const apiService = {
       body: JSON.stringify(data)
     });
     return res.json();
+  },
+
+  updateWallet: async (wallet: any) => {
+    const response = await fetch(`${API_BASE_URL}/wallets/${wallet.id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(wallet), // Gửi body chứa { name, balance, type, ... }
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || 'Lỗi khi cập nhật ví');
+    }
+    return response.json();
+  },
+
+  deleteWallet: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/wallets/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      // Đọc message lỗi từ Backend (ví dụ: "Không thể xóa ví duy nhất")
+      const err = await response.json();
+      throw new Error(err.message || 'Lỗi khi xóa ví');
+    }
+    return response.json();
   },
   
   async transferMoney(data: { fromWalletName: string, toWalletName: string, amount: number, date: string, note?: string }) {
