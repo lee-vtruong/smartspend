@@ -634,10 +634,37 @@ app.get('/api/budgets', authenticate, async (req: any, res: any) => {
 });
 
 app.post('/api/budgets', authenticate, async (req: any, res: any) => {
-    const newBudget = { ...req.body, userId: req.user.id, spent: 0 };
-    const ref = await db.collection('budgets').add(newBudget);
-    await checkAndUnlockAchievements(req.user.id);
-    res.status(201).json({ id: ref.id, ...newBudget });
+    const { category, limit, spent } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const duplicateCheck = await db.collection('budgets')
+            .where('userId', '==', userId)
+            .where('category', '==', category)
+            .get();
+
+        if (!duplicateCheck.empty) {
+            return res.status(400).json({ message: "Ngân sách cho danh mục này đã tồn tại." });
+        }
+        // ------------------------------------------
+
+        const newBudgetRef = db.collection('budgets').doc();
+        const newBudget = {
+            userId,
+            category,
+            limit: Number(limit),
+            spent: Number(spent) || 0,
+            createdAt: new Date().toISOString()
+        };
+
+        await newBudgetRef.set(newBudget);
+        
+        res.status(201).json({ id: newBudgetRef.id, ...newBudget });
+
+    } catch (error) {
+        console.error("Create Budget Error:", error);
+        res.status(500).json({ message: "Lỗi server khi tạo ngân sách" });
+    }
 });
 
 app.delete('/api/budgets/:id', authenticate, async (req: any, res: any) => {

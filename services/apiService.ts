@@ -238,13 +238,18 @@ export const apiService = {
     return res.json();
   },
   
-  async addBudget(data: any) {
-    const res = await fetch(`${API_BASE_URL}/budgets`, {
+  addBudget: async (budget: any) => {
+    const response = await fetch(`${API_BASE_URL}/budgets`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify(budget),
     });
-    return res.json();
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Failed to add budget');
+    }
+    return response.json();
   },
   
   async deleteBudget(id: string) {

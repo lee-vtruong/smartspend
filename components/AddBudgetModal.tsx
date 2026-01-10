@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { useAppContext } from '../contexts/AppContext';
+import { useAppContext } from '../contexts/AppContext'; // Import Context
 import { DefaultIcon } from './Icons';
 import { iconMap } from '../constants';
 import { Budget } from '../types';
@@ -20,28 +20,26 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   budgetToEdit, 
   onUpdate 
 }) => {
-  const { transactionCategories, t } = useAppContext();
+  // Lấy danh sách budgets hiện có để check trùng
+  const { transactionCategories, t, budgets } = useAppContext(); 
   
   const expenseCategories = transactionCategories.filter(c => c.type === 'expense');
   
-  // State: Dùng string cho limit để tránh lỗi nhập số 0 hoặc xóa trống bị nhảy
   const [category, setCategory] = useState('');
   const [limit, setLimit] = useState<string>(''); 
 
-  // --- FIX LỖI NHẢY SỐ TẠI ĐÂY ---
   useEffect(() => {
     if (isOpen) {
       if (budgetToEdit) {
-        // Chế độ Sửa
         setCategory(budgetToEdit.category);
-        setLimit(String(budgetToEdit.limit)); // Chuyển sang string để hiển thị
+        setLimit(String(budgetToEdit.limit)); 
       } else {
-        // Chế độ Thêm: Reset
+        // Mặc định chọn category đầu tiên chưa có ngân sách (nếu muốn thông minh hơn)
+        // Hoặc cứ để default cái đầu danh sách
         setCategory(expenseCategories[0]?.name || '');
         setLimit('');
       }
     }
-    // QUAN TRỌNG: Bỏ 'expenseCategories' khỏi dependency để tránh reset khi app re-render
   }, [isOpen, budgetToEdit]); 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,6 +50,19 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
         alert("Vui lòng nhập hạn mức lớn hơn 0");
         return;
     }
+
+    // --- FIX TC058: VALIDATE TRÙNG TẠI FRONTEND ---
+    // Kiểm tra xem có ngân sách nào khác (không phải cái đang sửa) có cùng category không
+    const isDuplicate = budgets.some(b => 
+        b.category === category &&          // Cùng danh mục
+        b.id !== budgetToEdit?.id           // Và không phải là chính nó (trường hợp Edit)
+    );
+
+    if (isDuplicate) {
+        alert(`Ngân sách cho danh mục "${t(category)}" đã tồn tại! Vui lòng chọn danh mục khác hoặc chỉnh sửa ngân sách cũ.`);
+        return;
+    }
+    // ---------------------------------------------
 
     if (budgetToEdit && onUpdate) {
       onUpdate({
@@ -85,18 +96,26 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
           <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto custom-scrollbar p-1">
              {expenseCategories.map((cat) => {
                  const IconComponent = iconMap[cat.iconName || 'DefaultIcon'] || DefaultIcon;
+                 // Kiểm tra xem category này đã có ngân sách chưa để visual hint (tùy chọn)
+                 const hasBudget = budgets.some(b => b.category === cat.name && b.id !== budgetToEdit?.id);
+
                  return (
                     <div 
                         key={cat.name}
                         onClick={() => setCategory(cat.name)}
-                        className={`cursor-pointer border rounded-xl p-2 flex flex-col items-center justify-center transition-all ${
+                        className={`cursor-pointer border rounded-xl p-2 flex flex-col items-center justify-center transition-all relative ${
                             category === cat.name
                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-500'
                             : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
-                        }`}
+                        } ${hasBudget ? 'opacity-50 grayscale' : ''}`} // Làm mờ nếu đã có
                     >
                         <IconComponent className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                         <span className="text-xs mt-1 text-center truncate w-full font-medium">{t(cat.name)}</span>
+                        
+                        {/* Icon cảnh báo nhỏ nếu đã có ngân sách */}
+                        {hasBudget && (
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" title="Đã có ngân sách"></span>
+                        )}
                     </div>
                  );
              })}
