@@ -486,9 +486,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const newTransactionData = await apiService.addTransaction(data);
       
+      // ... (Phần logic cập nhật state transactions và icon giữ nguyên) ...
       const allCats = [...INITIAL_TRANSACTION_CATEGORIES, ...transactionCategories.filter(c => !INITIAL_TRANSACTION_CATEGORIES.some(ic => ic.name === c.name))];
       const cat = allCats.find(c => c.name === newTransactionData.category);
-      
       const iconKey = cat?.iconName || 'FoodIcon';
       const IconComponent = (iconMap && iconMap[iconKey]) ? iconMap[iconKey] : DefaultIcon;
 
@@ -500,6 +500,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       ]);
       
+      // Cập nhật State Ngân sách (Local Update)
       if (newTransactionData.type === 'expense') {
         setBudgets((prevBudgets) => 
           prevBudgets.map(budget => 
@@ -509,13 +510,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           )
         );
       }
-      showToast("Giao dịch đã được ghi lại", "success");
+
+      if (newTransactionData.warning) {
+          showToast(newTransactionData.warning, "error"); 
+      } else {
+          showToast("Giao dịch đã được ghi lại", "success");
+      }
+      // -----------------------------------------------
+
     } catch (error: any) {
       console.error("❌ [AppContext] Lỗi thêm giao dịch:", error);
       showToast(error.message || "Không thể thêm giao dịch!", "error");
       throw error;
     }
-  };
+};
 
   const handleDeleteTransaction = async (id: string) => {
     try {

@@ -488,52 +488,73 @@ app.get('/api/transactions', authenticate, async (req: any, res: any) => {
 });
 
 app.post('/api/transactions', authenticate, async (req: any, res: any) => {
-    const { wallet: walletName, type, amount, ...rest } = req.body;
+    const { wallet: walletName, type, amount, category, ...rest } = req.body;
     const numAmount = Number(amount);
-    const userId = req.user.id; // Đảm bảo lấy userId từ token
+    const userId = req.user.id;
+    
+    let warningMessage = null; // Biến lưu cảnh báo
 
     try {
         await db.runTransaction(async (t: any) => {
-            // 1. Tìm ví trong Database
+            // 1. Xử lý Ví (Code cũ giữ nguyên)
             const wQuery = await t.get(db.collection('wallets').where('userId', '==', userId).where('name', '==', walletName));
-
-            if (wQuery.empty) {
-                throw new Error(`Không tìm thấy ví: ${walletName}`);
+            if (!wQuery.empty) {
+                const wDoc = wQuery.docs[0];
+                if (type === 'expense' && numAmount > wDoc.data().balance) {
+                    throw new Error("Số dư ví không đủ.");
+                }
+                const newBalance = type === 'expense' ? wDoc.data().balance - numAmount : wDoc.data().balance + numAmount;
+                t.update(wDoc.ref, { balance: newBalance });
             }
 
-            const wDoc = wQuery.docs[0];
-            const currentBalance = wDoc.data().balance;
+            // 2. Xử lý Ngân sách (Logic MỚI cho TC065)
+            if (type === 'expense') {
+                const budgetQuery = await t.get(
+                    db.collection('budgets')
+                        .where('userId', '==', userId)
+                        .where('category', '==', category)
+                );
 
-            // --- FIX TC030: KIỂM TRA SỐ DƯ TẠI BACKEND ---
-            // Nếu là khoản chi (expense) và số tiền chi lớn hơn số dư hiện có -> Báo lỗi
-            if (type === 'expense' && numAmount > currentBalance) {
-                throw new Error("Số dư ví không đủ để thực hiện giao dịch này.");
+                if (!budgetQuery.empty) {
+                    const budgetDoc = budgetQuery.docs[0];
+                    const budgetData = budgetDoc.data();
+                    
+                    // Tính tổng chi tiêu mới
+                    const newSpent = (budgetData.spent || 0) + numAmount;
+                    
+                    // Cập nhật DB
+                    t.update(budgetDoc.ref, { spent: newSpent });
+
+                    // KIỂM TRA VƯỢT NGÂN SÁCH
+                    if (newSpent > budgetData.limit) {
+                        warningMessage = `⚠️ Cảnh báo: Bạn đã vượt quá ngân sách cho "${category}"!`;
+                    }
+                }
             }
-            // ---------------------------------------------
 
-            // 2. Cập nhật số dư ví
-            const newBalance = type === 'expense' 
-                ? currentBalance - numAmount 
-                : currentBalance + numAmount;
-            t.update(wDoc.ref, { balance: newBalance });
-
-            // 3. Tạo Transaction mới
+            // 3. Tạo Transaction
             const newTxRef = db.collection('transactions').doc();
             t.set(newTxRef, {
                 ...rest,
                 wallet: walletName,
                 type,
                 amount: numAmount,
+                category,
                 userId,
                 date: req.body.date || new Date().toISOString()
             });
         });
         
-        res.status(201).json({ id: "temp-id", ...req.body, userId }); // Trả về thành công
+        // Trả về warning kèm theo response
+        res.status(201).json({ 
+            id: "temp-id", 
+            ...req.body, 
+            userId, 
+            warning: warningMessage // <-- Gửi warning về Client
+        });
 
     } catch (e: any) {
         console.error(e);
-        // Trả về mã lỗi 400 (Bad Request) cùng thông báo cụ thể để Frontend hiển thị
         res.status(400).json({ message: e.message || "Lỗi tạo giao dịch" });
     }
 });

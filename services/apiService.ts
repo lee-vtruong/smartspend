@@ -205,7 +205,6 @@ export const apiService = {
         const err = await res.json();
         throw new Error(err.message || 'Failed to add transaction');
     }
-    // -------------------------------
 
     return res.json();
   },
