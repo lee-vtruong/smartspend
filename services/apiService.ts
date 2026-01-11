@@ -655,6 +655,14 @@ async updateGroupInfo(groupId: string, data: { name: string, note: string }) {
     return res.json();
   },
 
+  async getUserGrowthStats() {
+    const res = await fetch(`${API_BASE_URL}/admin/stats/user-growth`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error("Lỗi tải thống kê tăng trưởng");
+    return res.json();
+  },
+
   async unlockUser(userId: string) {
     const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/unlock`, {
       method: 'POST',

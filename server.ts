@@ -2086,6 +2086,40 @@ app.post('/api/admin/backups/:id/restore', authenticate, async (req: any, res: a
     }
 });
 
+app.get('/api/admin/stats/user-growth', authenticate, async (req: any, res: any) => {
+    try {
+        // (Tùy chọn) Check quyền admin
+        // if (req.user.role !== 'admin') return res.status(403).json({ message: "Không đủ quyền" });
+
+        const snapshot = await db.collection('users').get();
+        const users = snapshot.docs.map((doc: any) => doc.data());
+
+        // Logic thống kê: Group by Month (YYYY-MM)
+        const growthMap: Record<string, number> = {};
+
+        users.forEach((user: any) => {
+            if (user.createdAt) {
+                const date = new Date(user.createdAt);
+                // Tạo key dạng "2024-01", "2024-02"...
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                growthMap[key] = (growthMap[key] || 0) + 1;
+            }
+        });
+
+        // Chuyển đổi thành mảng và sắp xếp theo thời gian
+        const sortedKeys = Object.keys(growthMap).sort(); // Sắp xếp ngày tăng dần
+        
+        const labels = sortedKeys; // ["2024-01", "2024-02", ...]
+        const data = sortedKeys.map(key => growthMap[key]); // [5, 12, ...]
+
+        res.json({ labels, data });
+
+    } catch (e: any) {
+        console.error("Stats Error:", e);
+        res.status(500).json({ message: "Lỗi thống kê người dùng" });
+    }
+});
+
 // --- HELPER FUNCTIONS ---
 const checkAndUnlockAchievements = async (userId: string) => {
     const userRef = db.collection('users').doc(userId);

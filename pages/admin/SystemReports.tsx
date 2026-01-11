@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import { useAppContext } from '../../contexts/AppContext';
 import { apiService } from '../../services/apiService';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import UserGrowthChart from '../../components/charts/UserGrowthChart';
 
 // Định nghĩa kiểu dữ liệu cho Backup
 interface BackupFile {
@@ -128,6 +129,7 @@ const SystemReports: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </Card>
+                    <UserGrowthChart />
                 </div>
 
                 {/* Card 2: Biểu đồ Doanh thu (Giữ nguyên) */}
