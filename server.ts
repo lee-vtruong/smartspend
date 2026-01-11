@@ -1160,28 +1160,41 @@ app.post('/api/groups/:id/remove-member', authenticate, async (req: any, res: an
     }
 });
 
-// Trong server.ts
-
 app.post('/api/groups', authenticate, async (req: any, res: any) => {
     const { name, currency, invitedMemberIds } = req.body;
 
-    // Validate cơ bản
     if (!name) return res.status(400).json({ message: "Tên nhóm là bắt buộc." });
 
     try {
         await db.runTransaction(async (t: any) => {
-            // 1. Tạo Group chỉ với Owner
+            // --- BƯỚC 1: ĐỌC DỮ LIỆU (READS) ---
+            // Kiểm tra và lấy thông tin tất cả user được mời TRƯỚC khi ghi bất cứ gì
+            const invitedUserDocs: any[] = [];
+            
+            if (invitedMemberIds && Array.isArray(invitedMemberIds) && invitedMemberIds.length > 0) {
+                for (const uid of invitedMemberIds) {
+                    const userRef = db.collection('users').doc(uid);
+                    const userDoc = await t.get(userRef);
+                    if (userDoc.exists) {
+                        invitedUserDocs.push(userDoc);
+                    }
+                }
+            }
+
+            // --- BƯỚC 2: GHI DỮ LIỆU (WRITES) ---
+            
+            // 2.1. Tạo Group
+            const newGroupRef = db.collection('groups').doc();
             const owner = {
                 id: req.user.id,
                 name: req.user.name,
                 avatar: req.user.avatar
             };
 
-            const newGroupRef = db.collection('groups').doc();
             const newGroup = {
                 name,
                 currency: currency || 'VND',
-                members: [owner], // Chỉ add chính mình
+                members: [owner], // Group mới chỉ có mình Owner
                 transactions: [],
                 createdAt: new Date().toISOString(),
                 createdBy: req.user.id,
@@ -1190,24 +1203,18 @@ app.post('/api/groups', authenticate, async (req: any, res: any) => {
 
             t.set(newGroupRef, newGroup);
 
-            // 2. Tạo lời mời cho các thành viên khác (Nếu có)
-            if (invitedMemberIds && Array.isArray(invitedMemberIds) && invitedMemberIds.length > 0) {
-                for (const uid of invitedMemberIds) {
-                    // Lấy info user để cache (tùy chọn) hoặc chỉ cần ID
-                    const userDoc = await t.get(db.collection('users').doc(uid));
-                    if (userDoc.exists) {
-                        const invRef = db.collection('invitations').doc();
-                        t.set(invRef, {
-                            groupId: newGroupRef.id,
-                            groupName: name,
-                            inviterId: req.user.id,
-                            inviterName: req.user.name,
-                            inviteeId: uid,
-                            status: 'pending',
-                            createdAt: new Date().toISOString()
-                        });
-                    }
-                }
+            // 2.2. Tạo Lời mời (Dựa trên danh sách user đã đọc ở Bước 1)
+            for (const userDoc of invitedUserDocs) {
+                const invRef = db.collection('invitations').doc();
+                t.set(invRef, {
+                    groupId: newGroupRef.id,
+                    groupName: name,
+                    inviterId: req.user.id,
+                    inviterName: req.user.name,
+                    inviteeId: userDoc.id,
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                });
             }
         });
 
@@ -1215,7 +1222,8 @@ app.post('/api/groups', authenticate, async (req: any, res: any) => {
 
     } catch (e: any) {
         console.error("Lỗi tạo nhóm:", e);
-        res.status(500).json({ message: "Lỗi server khi tạo nhóm" });
+        // Frontend cần nhận được lỗi 500 này để không báo thành công ảo
+        res.status(500).json({ message: "Lỗi server: " + e.message });
     }
 });
 
