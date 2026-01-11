@@ -492,6 +492,79 @@ export const apiService = {
     return res.json();
   },
 
+async updateGroupInfo(groupId: string, data: { name: string, note: string }) {
+        const res = await fetch(`${API_BASE_URL}/groups/${groupId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Lỗi cập nhật thông tin nhóm");
+        return res.json();
+    },
+
+    // Transfer Ownership (TC102)
+    async transferGroupOwnership(groupId: string, newOwnerId: string) {
+        const res = await fetch(`${API_BASE_URL}/groups/${groupId}/transfer-ownership`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ newOwnerId })
+        });
+        if (!res.ok) throw new Error("Lỗi chuyển quyền");
+        return res.json();
+    },
+
+    // Invite Member (TC100)
+    async inviteMember(groupId: string, email: string) {
+        const res = await fetch(`${API_BASE_URL}/groups/${groupId}/invite`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ email })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || "Lỗi gửi lời mời");
+        }
+        return res.json();
+    },
+
+    // Get Invitations (TC103)
+    async getMyInvitations() {
+        const res = await fetch(`${API_BASE_URL}/invitations`, { headers: getHeaders() });
+        return res.json();
+    },
+
+    // Respond Invitation (TC103, TC104)
+    async respondToInvitation(invId: string, status: 'accepted' | 'rejected') {
+        const res = await fetch(`${API_BASE_URL}/invitations/${invId}/respond`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ status })
+        });
+        if (!res.ok) throw new Error("Lỗi xử lý lời mời");
+        return res.json();
+    },
+
+    // Update Transaction (TC107)
+    async updateGroupTransaction(groupId: string, txId: string, data: any) {
+        const res = await fetch(`${API_BASE_URL}/groups/${groupId}/transactions/${txId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Lỗi sửa giao dịch");
+        return res.json();
+    },
+
+    // Delete Transaction (TC108)
+    async deleteGroupTransaction(groupId: string, txId: string) {
+        const res = await fetch(`${API_BASE_URL}/groups/${groupId}/transactions/${txId}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!res.ok) throw new Error("Lỗi xóa giao dịch");
+        return res.json();
+    },
+
   // CATEGORIES
   async getCustomCategories() {
     const res = await fetch(`${API_BASE_URL}/categories`, { headers: getHeaders() });

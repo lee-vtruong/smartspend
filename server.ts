@@ -1048,7 +1048,6 @@ app.get('/api/groups', authenticate, async (req: any, res: any) => {
     }
 });
 
-// --- API XÓA NHÓM (U034) ---
 app.delete('/api/groups/:id', authenticate, async (req: any, res: any) => {
     const groupId = req.params.id;
     try {
@@ -1094,6 +1093,47 @@ app.post('/api/groups/:id/leave', authenticate, async (req: any, res: any) => {
         res.json({ success: true });
     } catch (e: any) {
         res.status(400).json({ message: e.message });
+    }
+});
+
+app.post('/api/groups/:id/transactions', authenticate, async (req: any, res: any) => {
+    const groupId = req.params.id;
+    const { amount, description, type, payerId, participants, date } = req.body;
+    const numAmount = Number(amount);
+
+    try {
+        await db.runTransaction(async (t: any) => {
+            const groupRef = db.collection('groups').doc(groupId);
+            const groupDoc = await t.get(groupRef);
+            
+            if (!groupDoc.exists) throw new Error("Nhóm không tồn tại");
+            
+            // Validate thành viên
+            const members = groupDoc.data().members || [];
+            if (!members.some((m: any) => m.id === req.user.id)) {
+                throw new Error("Bạn không phải thành viên nhóm này");
+            }
+
+            // Tạo giao dịch mới trong sub-collection
+            const txRef = groupRef.collection('transactions').doc();
+            const newTx = {
+                type, // 'expense' | 'contribution'
+                amount: numAmount,
+                description,
+                payerId: payerId || req.user.id,
+                participants: participants || [], // Mảng ID những người chịu phí
+                createdBy: req.user.id,
+                date: date || new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            };
+
+            t.set(txRef, newTx);
+        });
+
+        res.status(201).json({ success: true, message: "Đã thêm giao dịch nhóm" });
+    } catch (e: any) {
+        console.error("Add Group Tx Error:", e);
+        res.status(500).json({ message: e.message || "Lỗi thêm giao dịch" });
     }
 });
 
@@ -1267,6 +1307,169 @@ app.post('/api/groups/:id/add-member', authenticate, async (req: any, res: any) 
         res.json({ success: true });
     } catch (e: any) {
         res.status(400).json({ message: e.message });
+    }
+});
+
+app.put('/api/groups/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const { name, note } = req.body;
+        const groupRef = db.collection('groups').doc(req.params.id);
+        const doc = await groupRef.get();
+
+        if (!doc.exists) return res.status(404).json({ message: "Không tìm thấy nhóm" });
+        if (doc.data().createdBy !== req.user.id) return res.status(403).json({ message: "Chỉ trưởng nhóm mới được sửa." });
+
+        await groupRef.update({ name, note });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// 2. CHUYỂN QUYỀN TRƯỞNG NHÓM (TC102)
+app.post('/api/groups/:id/transfer-ownership', authenticate, async (req: any, res: any) => {
+    try {
+        const { newOwnerId } = req.body;
+        const groupRef = db.collection('groups').doc(req.params.id);
+        
+        await db.runTransaction(async (t: any) => {
+            const doc = await t.get(groupRef);
+            if (!doc.exists) throw new Error("Nhóm không tồn tại");
+            const data = doc.data();
+
+            if (data.createdBy !== req.user.id) throw new Error("Bạn không phải trưởng nhóm.");
+            if (!data.members.some((m: any) => m.id === newOwnerId)) throw new Error("Người nhận không có trong nhóm.");
+
+            t.update(groupRef, { createdBy: newOwnerId });
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ message: e.message });
+    }
+});
+
+// 3. HỆ THỐNG LỜI MỜI (TC100, TC103, TC104)
+// Gửi lời mời
+app.post('/api/groups/:id/invite', authenticate, async (req: any, res: any) => {
+    try {
+        const { email } = req.body;
+        const groupId = req.params.id;
+
+        // Tìm user theo email
+        const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (userSnapshot.empty) return res.status(404).json({ message: "Email chưa đăng ký tài khoản." });
+        
+        const invitee = userSnapshot.docs[0];
+        const inviteeId = invitee.id;
+
+        // Kiểm tra đã trong nhóm chưa
+        const groupDoc = await db.collection('groups').doc(groupId).get();
+        if (groupDoc.data().members.some((m: any) => m.id === inviteeId)) {
+            return res.status(400).json({ message: "Thành viên này đã ở trong nhóm." });
+        }
+
+        // Tạo bản ghi lời mời
+        await db.collection('invitations').add({
+            groupId,
+            groupName: groupDoc.data().name,
+            inviterId: req.user.id,
+            inviterName: req.user.name,
+            inviteeId,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+
+        res.json({ success: true, message: "Đã gửi lời mời." });
+    } catch (e: any) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// Lấy danh sách lời mời của user
+app.get('/api/invitations', authenticate, async (req: any, res: any) => {
+    try {
+        const snapshot = await db.collection('invitations')
+            .where('inviteeId', '==', req.user.id)
+            .where('status', '==', 'pending')
+            .get();
+        
+        const invitations = snapshot.docs.map(mapDoc);
+        res.json(invitations);
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi lấy lời mời" });
+    }
+});
+
+// Xử lý lời mời (Accept/Reject)
+app.post('/api/invitations/:id/respond', authenticate, async (req: any, res: any) => {
+    try {
+        const { status } = req.body; // 'accepted' | 'rejected'
+        const invId = req.params.id;
+        const invRef = db.collection('invitations').doc(invId);
+
+        await db.runTransaction(async (t: any) => {
+            const invDoc = await t.get(invRef);
+            if (!invDoc.exists) throw new Error("Lời mời không tồn tại");
+            
+            const invData = invDoc.data();
+            if (invData.inviteeId !== req.user.id) throw new Error("Không có quyền.");
+            if (invData.status !== 'pending') throw new Error("Lời mời đã được xử lý.");
+
+            if (status === 'accepted') {
+                // Thêm vào nhóm
+                const groupRef = db.collection('groups').doc(invData.groupId);
+                const groupDoc = await t.get(groupRef);
+                
+                if (groupDoc.exists) {
+                    const currentMembers = groupDoc.data().members || [];
+                    if (!currentMembers.some((m: any) => m.id === req.user.id)) {
+                        t.update(groupRef, {
+                            members: [...currentMembers, {
+                                id: req.user.id,
+                                name: req.user.name,
+                                avatar: req.user.avatar
+                            }]
+                        });
+                    }
+                }
+            }
+            
+            // Cập nhật trạng thái lời mời (hoặc xóa luôn cũng được, ở đây ta update status)
+            t.update(invRef, { status });
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ message: e.message });
+    }
+});
+
+// 4. SỬA/XÓA GIAO DỊCH NHÓM (TC107, TC108)
+// Sửa giao dịch
+app.put('/api/groups/:groupId/transactions/:txId', authenticate, async (req: any, res: any) => {
+    try {
+        const { groupId, txId } = req.params;
+        const updateData = req.body; // { amount, description, ... }
+        
+        // Cần check quyền: Chỉ người tạo hoặc trưởng nhóm mới được sửa
+        const txRef = db.collection('groups').doc(groupId).collection('transactions').doc(txId);
+        
+        await txRef.update(updateData);
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ message: "Lỗi cập nhật giao dịch" });
+    }
+});
+
+// Xóa giao dịch
+app.delete('/api/groups/:groupId/transactions/:txId', authenticate, async (req: any, res: any) => {
+    try {
+        const { groupId, txId } = req.params;
+        await db.collection('groups').doc(groupId).collection('transactions').doc(txId).delete();
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ message: "Lỗi xóa giao dịch" });
     }
 });
 

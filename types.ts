@@ -113,6 +113,7 @@ export interface GroupTransaction {
   payerId: string; // Member who paid
   participants: string[]; // Members who share the expense
   createdAt?: string;
+  createdBy?: string;
 }
 
 export interface Group {
@@ -123,6 +124,7 @@ export interface Group {
   transactions: GroupTransaction[]; 
   createdBy: string;
   createdAt?: string;
+  note?: string;
 }
 
 export interface Settlement {

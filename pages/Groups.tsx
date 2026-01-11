@@ -4,24 +4,21 @@ import Card from '../components/Card';
 import AddGroupModal from '../components/AddGroupModal';
 import AddGroupTransactionModal from '../components/AddGroupTransactionModal';
 import AddMemberModal from '../components/AddMemberModal';
-import GroupSettingsModal from '../components/GroupSettingsModal'; // <--- Import Modal cài đặt
+import GroupSettingsModal from '../components/GroupSettingsModal';
 import { useAppContext } from '../contexts/AppContext';
 import { apiService } from '../services/apiService';
 
-// Component chi tiết của một nhóm
+// --- SUB-COMPONENT: GROUP DETAILS ---
 const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
-    const { t, language, handleAddGroupTransaction, fetchInitialData, user } = useAppContext();
+    const { t, language, handleAddGroupTransaction, fetchInitialData, user, showToast } = useAppContext();
     
     const [activeTab, setActiveTab] = useState('overview');
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
     const [isAddMemberModalOpen, setAddMemberModalOpen] = useState(false);
-    const [isSettingsOpen, setSettingsOpen] = useState(false); // <--- State mở Modal cài đặt
-    
-    // State lưu giao dịch của nhóm (lấy từ sub-collection)
+    const [isSettingsOpen, setSettingsOpen] = useState(false);
     const [transactions, setTransactions] = useState<GroupTransaction[]>([]);
     const [isLoadingTx, setIsLoadingTx] = useState(false);
 
-    // Kiểm tra xem user hiện tại có phải chủ nhóm không
     const isOwner = group.createdBy === user?.id;
 
     const formatGroupCurrency = (amount: number, currency: string) => {
@@ -29,7 +26,6 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
         return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(amount);
     };
 
-    // Hàm tải giao dịch từ Firebase
     const loadGroupTransactions = async () => {
         if (!group?.id) return;
         setIsLoadingTx(true);
@@ -43,73 +39,72 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
         }
     };
 
-    // Gọi hàm tải khi chuyển sang nhóm khác
     useEffect(() => {
         setActiveTab('overview');
         loadGroupTransactions();
     }, [group.id]);
 
     const onAddTransaction = async (transactionData: Omit<GroupTransaction, 'id'>) => {
-        await handleAddGroupTransaction(group.id, transactionData);
-        await loadGroupTransactions(); // Reload lại ngay lập tức
-        setTransactionModalOpen(false);
+        try {
+            await handleAddGroupTransaction(group.id, transactionData);
+            await loadGroupTransactions();
+            setTransactionModalOpen(false);
+            showToast("Thêm giao dịch thành công", "success");
+        } catch (e: any) {
+            showToast(e.message, "error");
+        }
     };
 
+    // --- FIX TC108: XÓA GIAO DỊCH ---
+    const handleDeleteTransaction = async (txId: string) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa giao dịch này? Số dư nợ của các thành viên sẽ được tính lại.")) {
+            try {
+                await apiService.deleteGroupTransaction(group.id, txId);
+                showToast("Đã xóa giao dịch", "success");
+                loadGroupTransactions();
+            } catch (e: any) {
+                showToast(e.message, "error");
+            }
+        }
+    };
+
+    // Logic tính toán số dư (Giữ nguyên logic cũ của bạn)
     const groupData = useMemo(() => {
         if (!group) return null;
-
-        // Map danh sách thành viên hiện tại
         const memberMap = new Map<string, GroupMember>(group.members.map(m => [m.id, m]));
-        
-        // Map số dư (Khởi tạo bằng 0)
         const balances = new Map<string, number>();
         group.members.forEach(m => balances.set(m.id, 0));
-
         let totalContributions = 0;
         let totalExpenses = 0;
 
-        // Hàm helper an toàn: Lấy thông tin thành viên, nếu đã bị xóa thì trả về object tạm
         const getSafeMember = (id: string): GroupMember => {
-            return memberMap.get(id) || {
-                id: id,
-                name: t('groups.formerMember') || "Thành viên cũ", // Hoặc "Unknown"
-                avatar: "https://ui-avatars.com/api/?name=?",
-            };
+            return memberMap.get(id) || { id: id, name: t('groups.formerMember') || "Thành viên cũ", avatar: "https://ui-avatars.com/api/?name=?" };
         };
 
         transactions.forEach(transaction => {
-            // Đảm bảo khởi tạo balance cho cả những người đã bị xóa nếu họ có trong giao dịch cũ
             if (!balances.has(transaction.payerId)) balances.set(transaction.payerId, 0);
-
-            // Loại 1: Đóng quỹ
             if (transaction.type === 'contribution') {
                 balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
                 totalContributions += transaction.amount;
-            } 
-            // Loại 2: Chi tiêu
-            else if (transaction.type === 'expense') {
+            } else if (transaction.type === 'expense') {
                 balances.set(transaction.payerId, (balances.get(transaction.payerId) || 0) + transaction.amount);
                 totalExpenses += transaction.amount;
-                
                 if (transaction.participants && transaction.participants.length > 0) {
                     const share = transaction.amount / transaction.participants.length;
                     transaction.participants.forEach(pid => {
-                        if (!balances.has(pid)) balances.set(pid, 0); // Init nếu thiếu
+                        if (!balances.has(pid)) balances.set(pid, 0);
                         balances.set(pid, (balances.get(pid) || 0) - share);
                     });
                 }
             }
         });
 
-        // Convert map to array để hiển thị
         const memberBalances = Array.from(balances.entries()).map(([id, balance]) => ({
-            member: getSafeMember(id), // <--- DÙNG HÀM AN TOÀN TẠI ĐÂY
+            member: getSafeMember(id),
             balance: balance,
         })).sort((a,b) => b.balance - a.balance);
 
-        // Thuật toán tìm ai trả cho ai (Settlements)
         const settlements: Settlement[] = [];
-        // Clone ra để tính toán không ảnh hưởng hiển thị
         const debtors = memberBalances.filter(mb => mb.balance < -0.01).map(mb => ({...mb, balance: -mb.balance})).sort((a,b) => b.balance - a.balance);
         const creditors = memberBalances.filter(mb => mb.balance > 0.01).sort((a,b) => b.balance - a.balance);
         
@@ -118,55 +113,35 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
             const debtor = debtors[i];
             const creditor = creditors[j];
             const amount = Math.min(debtor.balance, creditor.balance);
-
-            settlements.push({
-                from: debtor.member.name, // Không còn crash vì member luôn tồn tại
-                to: creditor.member.name,
-                amount: amount
-            });
-
+            settlements.push({ from: debtor.member.name, to: creditor.member.name, amount: amount });
             debtor.balance -= amount;
             creditor.balance -= amount;
-
             if (debtor.balance < 0.01) i++;
             if (creditor.balance < 0.01) j++;
         }
 
-        return {
-            totalBalance: totalContributions - totalExpenses,
-            totalExpenses,
-            memberBalances,
-            settlements
-        };
+        return { totalBalance: totalContributions - totalExpenses, totalExpenses, memberBalances, settlements };
     }, [group, transactions]);
 
-    if (!groupData) {
-        return <Card className="flex-1 flex items-center justify-center"><p className="text-muted">Đang tải...</p></Card>;
-    }
+    if (!groupData) return <Card className="flex-1 flex items-center justify-center"><p>Đang tải...</p></Card>;
     const { totalBalance, totalExpenses, memberBalances, settlements } = groupData;
-  
+
     return (
         <div className="flex flex-col flex-1 gap-6">
             <Card className="flex flex-col">
                  <div className="p-2">
-                    {/* Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div className="flex items-center gap-3">
                             <div>
                                 <h3 className="text-3xl font-extrabold text-text tracking-tight uppercase">{group.name}</h3>
+                                {/* Hiển thị ghi chú */}
+                                {group.note && <p className="text-xs text-muted mt-1 italic max-w-md">{group.note}</p>}
                                 <p className="text-muted mt-1 font-medium">{group.members.length} thành viên • {group.currency}</p>
                             </div>
-                            
-                            {/* NÚT CÀI ĐẶT (BÁNH RĂNG) - Để xóa/rời nhóm */}
-                            <button 
-                                onClick={() => setSettingsOpen(true)}
-                                className="p-2 rounded-full bg-background hover:bg-muted/20 text-muted hover:text-primary transition-all border border-card-border shadow-sm"
-                                title="Cài đặt nhóm"
-                            >
+                            <button onClick={() => setSettingsOpen(true)} className="p-2 rounded-full bg-background hover:bg-muted/20 text-muted hover:text-primary transition-all border border-card-border shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             </button>
                         </div>
-                        
                         <div className="flex space-x-3 w-full md:w-auto">
                             <button onClick={() => setAddMemberModalOpen(true)} className="flex-1 md:flex-none px-4 py-2.5 text-sm font-bold text-primary bg-primary/10 rounded-xl hover:bg-primary/20 flex items-center justify-center transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" /></svg> Mời
@@ -177,7 +152,6 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     </div>
 
-                    {/* Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-background/50 p-4 rounded-2xl border border-card-border">
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.totalFund')}</p>
@@ -187,16 +161,14 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.spent')}</p>
                             <p className="text-xl font-bold text-danger">{formatGroupCurrency(totalExpenses, group.currency)}</p>
                         </div>
-                        
                         <div className="bg-background/50 p-4 rounded-2xl border border-card-border flex flex-col justify-center cursor-pointer hover:bg-background/80 transition-all" onClick={() => setSettingsOpen(true)}>
                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.members')}</p>
                             <div className="flex -space-x-2 mt-1 items-center">
                                 {group.members.slice(0, 5).map(m => (
-                                    <img key={m.id} src={m.avatar || "https://ui-avatars.com/api/?name=" + m.name} alt={m.name} className="w-8 h-8 rounded-full border-2 border-card ring-2 ring-background shadow-sm"/>
+                                    <img key={m.id} src={m.avatar || `https://ui-avatars.com/api/?name=${m.name}`} alt={m.name} className="w-8 h-8 rounded-full border-2 border-card ring-2 ring-background shadow-sm"/>
                                 ))}
                             </div>
                         </div>
-
                         <div className="bg-background/50 p-4 rounded-2xl border border-card-border flex flex-col justify-center items-center">
                              <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">{t('groups.currency')}</p>
                              <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-black rounded-lg border border-primary/20">{group.currency}</span>
@@ -204,7 +176,6 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="mt-8 border-b border-card-border">
                     <nav className="flex space-x-8 px-2">
                         {[{ id: 'overview', label: t('groups.overviewTab') }, { id: 'transactions', label: t('groups.transactionsTab') }, { id: 'settle', label: t('groups.settleTab') }].map(tab => (
@@ -216,17 +187,14 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                     </nav>
                 </div>
 
-                {/* Content */}
                 <div className="mt-6 flex-1 min-h-[300px]">
-                    {/* TAB 1: OVERVIEW */}
                     {activeTab === 'overview' && (
                         <div className="space-y-3">
                             {memberBalances.map(({ member, balance }) => (
                                 <div key={member.id} className="flex justify-between items-center p-4 bg-background/40 hover:bg-background/60 rounded-2xl border border-card-border/50 transition-all">
                                     <div className="flex items-center">
                                         <div className="relative">
-                                            <img src={member.avatar || "https://ui-avatars.com/api/?name=" + member.name} alt={member.name} className="w-12 h-12 rounded-full shadow-sm ring-2 ring-white/10"/>
-                                            {/* HUY HIỆU CHỦ NHÓM */}
+                                            <img src={member.avatar || `https://ui-avatars.com/api/?name=${member.name}`} alt={member.name} className="w-12 h-12 rounded-full shadow-sm ring-2 ring-white/10"/>
                                             {member.id === group.createdBy && (
                                                 <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white p-1 rounded-full border-2 border-card shadow-sm" title="Trưởng nhóm">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 00-.556.834c-.083 1.03-.232 1.681-.486 2.149-.6.46-2.182.531-3.291.536-1.11 0-2.693-.075-3.291-.535-.254-.469-.403-1.12-.486-2.15a1 1 0 00-.556-.835A3.989 3.989 0 011 15a3.989 3.989 0 011.666-3.332L4.405 6.25l-1.233-.616a1 1 0 01.894-1.79l1.599.8L9.617 3.076V2a1 1 0 011-1z" clipRule="evenodd" /></svg>
@@ -234,7 +202,7 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                                             )}
                                         </div>
                                         <div className="ml-4">
-                                            <span className="font-bold text-text text-lg block">{member.name} {member.id === user.id && "(Bạn)"}</span>
+                                            <span className="font-bold text-text text-lg block">{member.name} {member.id === user?.id && "(Bạn)"}</span>
                                             {member.id === group.createdBy && <span className="text-[10px] uppercase font-bold text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded">Trưởng nhóm</span>}
                                         </div>
                                     </div>
@@ -249,14 +217,13 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     )}
 
-                    {/* TAB 2: GIAO DỊCH */}
                     {activeTab === 'transactions' && (
                         <ul className="divide-y divide-card-border/50">
                             {isLoadingTx ? (
                                 <p className="text-center py-4">Đang tải...</p>
                             ) : transactions.length > 0 ? (
                                 transactions.slice().sort((a,b) => new Date(b.date || b.createdAt || new Date()).getTime() - new Date(a.date || a.createdAt || new Date()).getTime()).map(transaction => (
-                                <li key={transaction.id} className="py-4 px-2 hover:bg-primary/5 transition-colors rounded-xl mb-1">
+                                <li key={transaction.id} className="py-4 px-2 hover:bg-primary/5 transition-colors rounded-xl mb-1 group/item">
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <p className="font-bold text-text text-lg">{transaction.description}</p>
@@ -264,11 +231,26 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                                                 <span className="font-semibold text-primary">{group.members.find(m => m.id === transaction.payerId)?.name || "Thành viên"}</span> {t('groups.paidSuffix')}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <p className={`font-black text-lg ${transaction.type === 'contribution' ? 'text-success' : 'text-text'}`}>
-                                                {transaction.type === 'contribution' ? '+' : ''}{formatGroupCurrency(transaction.amount, group.currency)}
-                                            </p>
-                                            <p className="text-xs text-muted font-medium">{new Date(transaction.date || transaction.createdAt || new Date()).toLocaleDateString('vi-VN')}</p>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <p className={`font-black text-lg ${transaction.type === 'contribution' ? 'text-success' : 'text-text'}`}>
+                                                    {transaction.type === 'contribution' ? '+' : ''}{formatGroupCurrency(transaction.amount, group.currency)}
+                                                </p>
+                                                <p className="text-xs text-muted font-medium">{new Date(transaction.date || transaction.createdAt || new Date()).toLocaleDateString('vi-VN')}</p>
+                                            </div>
+                                            
+                                            {/* NÚT XÓA GIAO DỊCH (TC108) */}
+                                            {(isOwner || transaction.createdBy === user?.id) && (
+                                                <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => handleDeleteTransaction(transaction.id)}
+                                                        className="p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg"
+                                                        title="Xóa giao dịch"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </li>
@@ -282,7 +264,6 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                         </ul>
                     )}
 
-                    {/* TAB 3: THANH TOÁN */}
                     {activeTab === 'settle' && (
                         <div>
                              <h4 className="font-bold mb-5 text-lg text-text px-2">{t('groups.settleTitle')}</h4>
@@ -334,28 +315,28 @@ const GroupDetails: React.FC<{ group: Group }> = ({ group }) => {
                 onSuccess={() => { if (fetchInitialData) fetchInitialData(); }}
             />
 
-            {/* MODAL CÀI ĐẶT NHÓM */}
             <GroupSettingsModal 
                 isOpen={isSettingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 group={group}
                 onSuccess={() => {
                     fetchInitialData(); 
-                    // Nếu xóa nhóm thì ở component cha sẽ tự reset selectedGroupId
                 }}
             />
         </div>
     );
 };
 
-// Component trang chính quản lý danh sách nhóm
+// --- MAIN PAGE: GROUPS LIST ---
 const GroupsPage: React.FC = () => {
-    const { groups, handleAddGroup, t } = useAppContext();
+    const { groups, handleAddGroup, t, fetchInitialData } = useAppContext();
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
+    
+    // State cho lời mời (TC103, TC104)
+    const [invitations, setInvitations] = useState<any[]>([]);
 
     useEffect(() => {
-        // Tự động chọn nhóm đầu tiên nếu chưa chọn hoặc nhóm cũ bị xóa
         if ((!selectedGroupId || !groups.find(g => g.id === selectedGroupId)) && groups.length > 0) {
             setSelectedGroupId(groups[0].id);
         } else if (groups.length === 0) {
@@ -363,11 +344,32 @@ const GroupsPage: React.FC = () => {
         }
     }, [groups, selectedGroupId]);
 
+    // Load Lời mời
+    useEffect(() => {
+        apiService.getMyInvitations()
+            .then(setInvitations)
+            .catch(err => console.error("Lỗi tải lời mời:", err));
+    }, []);
+
+    const handleRespondInvitation = async (invId: string, status: 'accepted' | 'rejected') => {
+        try {
+            await apiService.respondToInvitation(invId, status);
+            // Cập nhật lại list sau khi xử lý
+            setInvitations(prev => prev.filter(inv => inv.id !== invId));
+            if (status === 'accepted') {
+                fetchInitialData(); // Reload groups nếu chấp nhận
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     const selectedGroup = useMemo(() => {
         return groups.find(g => g.id === selectedGroupId) || null;
     }, [groups, selectedGroupId]);
     
-    if (groups.length === 0) {
+    // View khi chưa có nhóm nào (Empty State)
+    if (groups.length === 0 && invitations.length === 0) {
         return (
             <div className="min-h-[70vh] flex flex-col items-center justify-center">
                  <div className="text-center p-12 bg-card/40 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl max-w-lg">
@@ -402,6 +404,42 @@ const GroupsPage: React.FC = () => {
                     {t('groups.createButton')}
                 </button>
             </div>
+
+            {/* BLOCK HIỂN THỊ LỜI MỜI (TC103, TC104) */}
+            {invitations.length > 0 && (
+                <div className="mb-8 animate-fade-in-up">
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl shadow-sm">
+                        <h4 className="font-bold text-yellow-800 mb-3 flex items-center">
+                            <span className="bg-yellow-200 text-yellow-800 p-1 rounded mr-2">📩</span> 
+                            Lời mời tham gia nhóm ({invitations.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {invitations.map(inv => (
+                                <div key={inv.id} className="bg-white p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <p className="text-sm text-gray-800">
+                                            <strong>{inv.inviterName}</strong> mời bạn vào nhóm <strong className="text-primary">{inv.groupName}</strong>
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => handleRespondInvitation(inv.id, 'accepted')}
+                                            className="px-3 py-1.5 bg-success text-white text-xs font-bold rounded-lg hover:bg-success-focus shadow-md shadow-success/20">
+                                            Chấp nhận
+                                        </button>
+                                        <button 
+                                            onClick={() => handleRespondInvitation(inv.id, 'rejected')}
+                                            className="px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-300">
+                                            Từ chối
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 items-stretch">
                 <div className="lg:col-span-1 h-full">
