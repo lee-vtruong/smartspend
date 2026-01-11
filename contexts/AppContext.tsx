@@ -51,6 +51,7 @@ interface AppContextType {
   handleResetPassword: (email: string) => Promise<void>;
   handleChangePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   toggleUserLock: (id: string) => Promise<void>;
+  fetchSystemUsers: () => Promise<void>;
   
   // --- Data: Wallets & Transactions ---
   wallets: Wallet[];
@@ -289,7 +290,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     } catch (error) {
       console.error("Fetch data error:", error);
-      // Không throw error ở đây để tránh crash app, chỉ log
     }
   }, [isAuthenticated, user?.isAdmin]);
 
@@ -430,6 +430,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await apiService.changePassword({oldPassword, newPassword}); 
     showToast("Đổi mật khẩu thành công", "success");
   };
+
+  const fetchSystemUsers = useCallback(async () => {
+    try {
+        const users = await apiService.getSystemUsers();
+        setSystemUsers(users);
+    } catch (error) {
+        console.error("Failed to fetch system users:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+      if (user?.role === 'admin') {
+          fetchSystemUsers();
+      }
+  }, [user, fetchSystemUsers]);
 
   // --- 5. FUNCTIONAL ACTIONS (FIXED ICON SAFE) ---
 
@@ -770,7 +785,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentPage, setCurrentPage, 
       wallets, transactions, budgets, goals, debtsLoans, 
       achievements, unlockedAchievement, setUnlockedAchievement,
-      systemUsers, adminStats,
+      systemUsers, adminStats, fetchSystemUsers,
       notifications, 
       unreadNotificationCount: notifications.filter(n => !n.read).length,
       transactionCategories, 

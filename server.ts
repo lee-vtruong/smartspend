@@ -108,6 +108,7 @@ app.get('/', (req: any, res: any) => {
 });
 
 // --- AUTH ENDPOINTS ---
+
 app.post('/api/auth/login', async (req: any, res: any) => {
   const { email, password } = req.body;
   
@@ -128,7 +129,10 @@ app.post('/api/auth/login', async (req: any, res: any) => {
   }
 
   if (userData.status === 'locked') {
-      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.' });
+      const reason = userData.lockReason ? ` Lý do: ${userData.lockReason}` : '';
+      return res.status(403).json({ 
+          message: `Tài khoản của bạn đã bị khóa.${reason}. Vui lòng liên hệ Admin.` 
+      });
   }
   
   const { password: _, ...userWithoutPassword } = userData;
@@ -137,6 +141,37 @@ app.post('/api/auth/login', async (req: any, res: any) => {
       token: `mock-jwt-token-${userDoc.id}`, 
       user: { id: userDoc.id, ...userWithoutPassword } 
   });
+});
+
+app.post('/api/admin/users/:id/lock', authenticate, async (req: any, res: any) => {
+    // Kiểm tra quyền admin nếu cần (req.user.role === 'admin')
+    const userId = req.params.id;
+    const { reason } = req.body;
+
+    try {
+        await db.collection('users').doc(userId).update({
+            status: 'locked',
+            lockReason: reason || "Vi phạm quy định", // Lưu lý do vào DB
+            updatedAt: new Date().toISOString()
+        });
+        res.json({ success: true, message: "Đã khóa tài khoản." });
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi server" });
+    }
+});
+
+app.post('/api/admin/users/:id/unlock', authenticate, async (req: any, res: any) => {
+    const userId = req.params.id;
+    try {
+        await db.collection('users').doc(userId).update({
+            status: 'active',
+            lockReason: null, // Xóa lý do cũ
+            updatedAt: new Date().toISOString()
+        });
+        res.json({ success: true, message: "Đã mở khóa tài khoản." });
+    } catch (e) {
+        res.status(500).json({ message: "Lỗi server" });
+    }
 });
 
 app.post('/api/auth/signup', async (req: any, res: any) => {

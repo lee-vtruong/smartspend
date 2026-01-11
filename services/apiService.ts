@@ -632,6 +632,38 @@ async updateGroupInfo(groupId: string, data: { name: string, note: string }) {
     return res.json();
   },
   
+  async lockUser(userId: string, reason: string) {
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/lock`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    if (!res.ok) throw new Error("Lỗi khi khóa tài khoản");
+    return res.json();
+  },
+
+  getSystemUsers: async () => {
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Lỗi tải danh sách người dùng");
+    }
+    return res.json();
+  },
+
+  async unlockUser(userId: string) {
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/unlock`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error("Lỗi khi mở khóa");
+    return res.json();
+  },
+
   async adminToggleUserLock(id: string) {
     const res = await fetch(`${API_BASE_URL}/admin/users/${id}/toggle-lock`, {
       method: 'POST',
