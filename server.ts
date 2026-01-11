@@ -1160,50 +1160,58 @@ app.post('/api/groups/:id/remove-member', authenticate, async (req: any, res: an
     }
 });
 
+// Trong server.ts
+
 app.post('/api/groups', authenticate, async (req: any, res: any) => {
     const { name, currency, invitedMemberIds } = req.body;
 
-    if (!invitedMemberIds || !Array.isArray(invitedMemberIds) || invitedMemberIds.length < 2) {
-        return res.status(400).json({ message: "Nhóm phải có tối thiểu 3 thành viên (Bạn + 2 người nữa)." });
-    }
+    // Validate cơ bản
+    if (!name) return res.status(400).json({ message: "Tên nhóm là bắt buộc." });
 
     try {
-        const owner = {
-            id: req.user.id,
-            name: req.user.name,
-            avatar: req.user.avatar
-        };
+        await db.runTransaction(async (t: any) => {
+            // 1. Tạo Group chỉ với Owner
+            const owner = {
+                id: req.user.id,
+                name: req.user.name,
+                avatar: req.user.avatar
+            };
 
-        const initialMembers = [owner];
+            const newGroupRef = db.collection('groups').doc();
+            const newGroup = {
+                name,
+                currency: currency || 'VND',
+                members: [owner], // Chỉ add chính mình
+                transactions: [],
+                createdAt: new Date().toISOString(),
+                createdBy: req.user.id,
+                note: ''
+            };
 
-        const memberPromises = invitedMemberIds.map(async (uid: string) => {
-            const userDoc = await db.collection('users').doc(uid).get();
-            if (userDoc.exists) {
-                const uData = userDoc.data();
-                return {
-                    id: userDoc.id,
-                    name: uData.name,
-                    avatar: uData.avatar
-                };
+            t.set(newGroupRef, newGroup);
+
+            // 2. Tạo lời mời cho các thành viên khác (Nếu có)
+            if (invitedMemberIds && Array.isArray(invitedMemberIds) && invitedMemberIds.length > 0) {
+                for (const uid of invitedMemberIds) {
+                    // Lấy info user để cache (tùy chọn) hoặc chỉ cần ID
+                    const userDoc = await t.get(db.collection('users').doc(uid));
+                    if (userDoc.exists) {
+                        const invRef = db.collection('invitations').doc();
+                        t.set(invRef, {
+                            groupId: newGroupRef.id,
+                            groupName: name,
+                            inviterId: req.user.id,
+                            inviterName: req.user.name,
+                            inviteeId: uid,
+                            status: 'pending',
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                }
             }
-            return null;
         });
 
-        const invitedMembers = await Promise.all(memberPromises);
-        const validInvitedMembers = invitedMembers.filter((m: any) => m !== null);
-        initialMembers.push(...validInvitedMembers);
-
-        const newGroup = { 
-            name, 
-            currency, 
-            members: initialMembers,
-            transactions: [],
-            createdAt: new Date().toISOString(),
-            createdBy: req.user.id
-        };
-
-        const ref = await db.collection('groups').add(newGroup);
-        res.status(201).json({ id: ref.id, ...newGroup });
+        res.status(201).json({ success: true, message: "Tạo nhóm và gửi lời mời thành công" });
 
     } catch (e: any) {
         console.error("Lỗi tạo nhóm:", e);
