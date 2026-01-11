@@ -1389,64 +1389,128 @@ app.post('/api/analyze-transaction', async (req: any, res: any) => {
     }
 });
 
+// app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
+//   try {
+//     const { message, context } = req.body;
+
+//     const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+//     console.log("API Key check:", apiKey ? "Có" : "Không");
+//     console.log("Key starts with:", apiKey?.substring(0, 10));
+
+//     if (!apiKey) {
+//       throw new Error("Không tìm thấy API Key. Kiểm tra file .env");
+//     }
+
+//     const ai = new GoogleGenAI({ apiKey });
+
+//     const modelsToTry = [
+//       "gemini-3-flash-preview",
+//     ];
+
+//     for (const modelName of modelsToTry) {
+//       try {
+//         console.log(`Thử model: ${modelName}`);
+
+//         const response = await ai.models.generateContent({
+//           model: modelName,
+//           contents: `Bạn là Mony – trợ lý tài chính cá nhân. Trả lời ngắn gọn, dễ hiểu.\nCâu hỏi: ${message}`,
+//         });
+
+//         console.log(`✅ Thành công với ${modelName}`);
+
+//         return res.json({
+//           success: true,
+//           text: response.text,
+//           model: modelName,
+//           note: "Dùng cùng hệ thống như phân tích giao dịch tự động",
+//         });
+//       } catch (modelErr: any) {
+//         console.log(`❌ ${modelName} failed:`, modelErr.message);
+//         continue;
+//       }
+//     }
+
+//     throw new Error("Tất cả models đều thất bại");
+//   } catch (error: any) {
+//     console.error("Chat error:", error.message);
+
+//     const mockResponses = [
+//       `Xin chào! Bạn hỏi về "${req.body?.message}". Tôi là Mony – trợ lý tài chính. Tính năng ✨ phân tích giao dịch tự động vẫn đang hoạt động tốt.`,
+//       `Hiện chat AI đang bảo trì nhẹ, nhưng bạn vẫn dùng được AI phân tích giao dịch (icon tia lửa ✨).`,
+//       `Bạn có thể thử nhập: "ăn sáng 50k", "lương tháng 15tr" để dùng AI phân tích giao dịch ngay nhé!`,
+//     ];
+
+//     return res.json({
+//       success: true,
+//       text: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+//       model: "mock-aware",
+//       isMock: true,
+//       tip: "Dùng AI phân tích giao dịch tự động – đang chạy ổn định!",
+//     });
+//   }
+// });
+
 app.post("/api/ai/chat", authenticate, async (req: any, res: any) => {
   try {
     const { message, context } = req.body;
 
+    // --- 1. DEBUG LOG ---
+    console.log("================ AI CHAT (OLD SYNTAX) ================");
+    console.log("🗣️ Câu hỏi:", message);
+    if (context && context.transactions) {
+        console.log(`📊 Context: ${context.transactions.length} giao dịch, ${context.budgets?.length || 0} ngân sách.`);
+    } else {
+        console.log("⚠️ Context RỖNG!");
+    }
+
     const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-
-    console.log("API Key check:", apiKey ? "Có" : "Không");
-    console.log("Key starts with:", apiKey?.substring(0, 10));
-
     if (!apiKey) {
-      throw new Error("Không tìm thấy API Key. Kiểm tra file .env");
+      throw new Error("Không tìm thấy API Key");
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const modelsToTry = [
-      "gemini-3-flash-preview",
-    ];
+    const contextString = JSON.stringify(context, null, 2);
+    
+    const fullPrompt = `
+      Vai trò: Bạn là Mony - Trợ lý tài chính cá nhân.
 
-    for (const modelName of modelsToTry) {
-      try {
-        console.log(`Thử model: ${modelName}`);
+      DỮ LIỆU CỦA NGƯỜI DÙNG (CONTEXT):
+      ${contextString}
 
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: `Bạn là Mony – trợ lý tài chính cá nhân. Trả lời ngắn gọn, dễ hiểu.\nCâu hỏi: ${message}`,
-        });
+      QUY TẮC BẢO MẬT (TC080 - BẮT BUỘC):
+      1. Bạn CHỈ được trả lời dựa trên dữ liệu Context ở trên.
+      2. Nếu người dùng hỏi về thông tin cá nhân KHÔNG có trong Context (như số tài khoản ngân hàng, email, mật khẩu, địa chỉ...), bạn phải TỪ CHỐI.
+      3. Câu trả lời mặc định khi bị hỏi tin nhạy cảm: "Tôi không có quyền truy cập vào tài khoản ngân hàng, email hay bất kỳ dữ liệu cá nhân nào khác bên ngoài cuộc trò chuyện này."
 
-        console.log(`✅ Thành công với ${modelName}`);
+      YÊU CẦU:
+      - Trả lời ngắn gọn, bằng tiếng Việt.
+      - Câu hỏi của người dùng: "${message}"
+    `;
 
-        return res.json({
-          success: true,
-          text: response.text,
-          model: modelName,
-          note: "Dùng cùng hệ thống như phân tích giao dịch tự động",
-        });
-      } catch (modelErr: any) {
-        console.log(`❌ ${modelName} failed:`, modelErr.message);
-        continue;
-      }
-    }
+    console.log(`🤖 Đang gọi model: gemini-3-flash-preview...`);
 
-    throw new Error("Tất cả models đều thất bại");
-  } catch (error: any) {
-    console.error("Chat error:", error.message);
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: fullPrompt, 
+    });
 
-    const mockResponses = [
-      `Xin chào! Bạn hỏi về "${req.body?.message}". Tôi là Mony – trợ lý tài chính. Tính năng ✨ phân tích giao dịch tự động vẫn đang hoạt động tốt.`,
-      `Hiện chat AI đang bảo trì nhẹ, nhưng bạn vẫn dùng được AI phân tích giao dịch (icon tia lửa ✨).`,
-      `Bạn có thể thử nhập: "ăn sáng 50k", "lương tháng 15tr" để dùng AI phân tích giao dịch ngay nhé!`,
-    ];
+    console.log(`✅ Thành công!`);
 
     return res.json({
       success: true,
-      text: mockResponses[Math.floor(Math.random() * mockResponses.length)],
-      model: "mock-aware",
-      isMock: true,
-      tip: "Dùng AI phân tích giao dịch tự động – đang chạy ổn định!",
+      text: response.text, 
+      model: "gemini-3-flash-preview",
+    });
+
+  } catch (error: any) {
+    console.error("❌ Chat Error:", error.message);
+    
+    return res.json({
+        success: false,
+        text: "Hệ thống đang bảo trì tính năng Chat, vui lòng thử lại sau. (Lỗi kết nối AI)",
+        error: error.message
     });
   }
 });

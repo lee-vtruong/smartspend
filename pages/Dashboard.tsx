@@ -269,12 +269,15 @@ const Dashboard: React.FC = () => {
   const openEditGoal = (goal: Goal) => { setGoalToEdit(goal); setAddGoalModalOpen(true); }
 
   return (
-    <div>
-      <div className="pb-40 animate-fade-in"> 
-        <div className="mb-6"><FinancialOverviewCard /></div>
+    <div className="pb-40 animate-fade-in"> 
+      {/* 1. FINANCIAL OVERVIEW */}
+      <div className="mb-6">
+        <FinancialOverviewCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* 2. LEFT COLUMN (Giao dịch & Ví) */}
         <div className="lg:col-span-2 space-y-6">
             <Card title={t('dashboard.recentTransactions')}>
                 {transactions.length > 0 ? (
@@ -330,6 +333,7 @@ const Dashboard: React.FC = () => {
             </Card>
         </div>
 
+        {/* 3. RIGHT COLUMN (Ngân sách, Danh hiệu, Mục tiêu) */}
         <div className="space-y-6">
            <Card>
             <div className="flex justify-between items-center mb-4">
@@ -374,6 +378,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
+      {/* 4. FLOATING ACTION BUTTON (Nút thêm giao dịch) */}
       <button 
         onClick={() => setTransactionModalOpen(true)} 
         className="fixed bottom-8 right-6 bg-primary text-white p-4 rounded-full shadow-2xl hover:bg-primary-focus transition-all transform hover:scale-110 hover:rotate-90 z-40"
@@ -383,6 +388,7 @@ const Dashboard: React.FC = () => {
         </svg>
       </button>
 
+      {/* 5. MODALS */}
       <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} onAdd={handleAddWallet} />
       {isEditWalletModalOpen && walletToEdit && <EditWalletModal isOpen={isEditWalletModalOpen} onClose={() => setEditWalletModalOpen(false)} onSave={handleEditWallet} walletToEdit={walletToEdit} />}
       <AddTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} onAdd={handleAddTransaction} wallets={wallets} />
