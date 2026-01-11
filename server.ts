@@ -834,6 +834,14 @@ app.post('/api/debts', authenticate, async (req: any, res: any) => {
     const numAmount = Number(initialAmount);
 
     try {
+        if (!debtData.person || typeof debtData.person !== 'string' || debtData.person.trim() === '') {
+            return res.status(400).json({ message: "Vui lòng nhập tên người liên quan." });
+        }
+
+        if (isNaN(numAmount) || numAmount <= 0) {
+            return res.status(400).json({ message: "Số tiền phải lớn hơn 0." });
+        }
+
         await db.runTransaction(async (t: any) => {
              
              let walletDoc = null;
@@ -858,6 +866,7 @@ app.post('/api/debts', authenticate, async (req: any, res: any) => {
              const newDebtRef = db.collection('debts').doc();
              const newDebt = {
                  ...debtData,
+                 person: debtData.person.trim(), 
                  initialAmount: numAmount,
                  userId,
                  paidAmount: 0,

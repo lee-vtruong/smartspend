@@ -366,6 +366,19 @@ export const apiService = {
     return res.json();
   },
 
+  async deleteDebt(id: string) {
+    const res = await fetch(`${API_BASE_URL}/debts/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi xóa khoản nợ');
+    }
+    return res.json();
+  },
+
   // MỚI: Xóa khoản nợ
   async deleteDebtLoan(id: string) {
     const res = await fetch(`${API_BASE_URL}/debts/${id}`, {

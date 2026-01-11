@@ -51,6 +51,16 @@ const AddDebtLoanModal: React.FC<AddDebtLoanModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!person.trim()) {
+      showToast("Vui lòng nhập tên người liên quan!", "error");
+      return;
+    }
+
+    if (initialAmount <= 0) {
+      showToast("Số tiền phải lớn hơn 0!", "error");
+      return;
+    }
     
     const payload: any = {
       type,
