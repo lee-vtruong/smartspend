@@ -1400,7 +1400,6 @@ app.post('/api/groups/:id/transfer-ownership', authenticate, async (req: any, re
     }
 });
 
-// 3. HỆ THỐNG LỜI MỜI (TC100, TC103, TC104)
 // Gửi lời mời
 app.post('/api/groups/:id/invite', authenticate, async (req: any, res: any) => {
     try {
@@ -1493,6 +1492,70 @@ app.post('/api/invitations/:id/respond', authenticate, async (req: any, res: any
         res.json({ success: true });
     } catch (e: any) {
         res.status(400).json({ message: e.message });
+    }
+});
+
+app.get('/api/groups/:groupId/invitations', authenticate, async (req: any, res: any) => {
+    try {
+        const groupId = req.params.groupId;
+        
+        // Check xem user có phải thành viên nhóm không
+        const groupDoc = await db.collection('groups').doc(groupId).get();
+        if (!groupDoc.exists) return res.status(404).json({ message: "Nhóm không tồn tại" });
+        
+        const isMember = groupDoc.data().members.some((m: any) => m.id === req.user.id);
+        if (!isMember) return res.status(403).json({ message: "Không có quyền xem." });
+
+        // Lấy các lời mời pending của nhóm này
+        const snapshot = await db.collection('invitations')
+            .where('groupId', '==', groupId)
+            .where('status', '==', 'pending')
+            .get();
+
+        const invitations = [];
+        // Lấy thêm thông tin user được mời (avatar, email) để hiển thị cho đẹp
+        for (const doc of snapshot.docs) {
+            const invData = doc.data();
+            const userDoc = await db.collection('users').doc(invData.inviteeId).get();
+            const userData = userDoc.exists ? userDoc.data() : {};
+            
+            invitations.push({
+                id: doc.id,
+                ...invData,
+                inviteeEmail: userData.email || "Email ẩn",
+                inviteeAvatar: userData.avatar || "https://via.placeholder.com/40",
+                inviteeName: userData.name || "Unknown" // Đảm bảo có tên
+            });
+        }
+
+        res.json(invitations);
+    } catch (e: any) {
+        console.error("Get Group Invites Error:", e);
+        res.status(500).json({ message: "Lỗi lấy danh sách lời mời" });
+    }
+});
+
+// 2. HỦY LỜI MỜI (Revoke Invitation)
+app.delete('/api/invitations/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const invId = req.params.id;
+        const invRef = db.collection('invitations').doc(invId);
+        const invDoc = await invRef.get();
+
+        if (!invDoc.exists) return res.status(404).json({ message: "Lời mời không tồn tại" });
+        
+        const invData = invDoc.data();
+        
+        // Chỉ người mời (inviter) hoặc người được mời (invitee) mới được xóa
+        // Hoặc chủ nhóm (cần query thêm group để check owner, ở đây làm đơn giản là người mời)
+        if (invData.inviterId !== req.user.id && invData.inviteeId !== req.user.id) {
+            return res.status(403).json({ message: "Không có quyền hủy lời mời này." });
+        }
+
+        await invRef.delete();
+        res.json({ success: true, message: "Đã hủy lời mời." });
+    } catch (e: any) {
+        res.status(500).json({ message: e.message });
     }
 });
 

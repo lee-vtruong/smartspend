@@ -513,7 +513,6 @@ async updateGroupInfo(groupId: string, data: { name: string, note: string }) {
         return res.json();
     },
 
-    // Invite Member (TC100)
     async inviteMember(groupId: string, email: string) {
         const res = await fetch(`${API_BASE_URL}/groups/${groupId}/invite`, {
             method: 'POST',
@@ -527,11 +526,28 @@ async updateGroupInfo(groupId: string, data: { name: string, note: string }) {
         return res.json();
     },
 
-    // Get Invitations (TC103)
     async getMyInvitations() {
         const res = await fetch(`${API_BASE_URL}/invitations`, { headers: getHeaders() });
         return res.json();
     },
+
+    async getGroupInvitations(groupId: string) {
+    const res = await fetch(`${API_BASE_URL}/groups/${groupId}/invitations`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error("Lỗi tải danh sách lời mời");
+    return res.json();
+  },
+
+  // Hủy lời mời
+  async cancelInvitation(invitationId: string) {
+    const res = await fetch(`${API_BASE_URL}/invitations/${invitationId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error("Lỗi hủy lời mời");
+    return res.json();
+  },
 
     // Respond Invitation (TC103, TC104)
     async respondToInvitation(invId: string, status: 'accepted' | 'rejected') {
