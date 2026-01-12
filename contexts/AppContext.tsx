@@ -213,7 +213,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const initAppData = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      // Dùng Promise.allSettled để tránh sập toàn bộ nếu 1 API lỗi
       const results = await Promise.allSettled([
         apiService.getWallets(),
         apiService.getTransactions(),
@@ -225,7 +224,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         apiService.getCustomCategories(),
       ]);
 
-      // Helper function để lấy data an toàn từ kết quả Promise
       const getData = (index: number, defaultVal: any = []) => 
         results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<any>).value : defaultVal;
 
