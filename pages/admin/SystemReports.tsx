@@ -251,7 +251,7 @@ const SystemReports: React.FC = () => {
                         <button 
                             onClick={handleCreateBackup}
                             disabled={isCreating}
-                            className="group px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary/80 rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                            className="group px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                         >
                             {isCreating ? (
                                 <>

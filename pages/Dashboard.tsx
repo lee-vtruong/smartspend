@@ -171,7 +171,7 @@ const GoalItem: React.FC<{
     const progressColor = isCompleted 
       ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' 
       : percentage > 75 
-        ? 'bg-gradient-to-r from-primary to-primary/80' 
+        ? 'bg-gradient-to-r from-primary to-primary' 
         : 'bg-gradient-to-r from-accent to-accent/80';
     
     let RenderedIcon = <RescueIcon className={`h-6 w-6 ${isCompleted ? 'text-emerald-600' : 'text-primary'}`} />;
@@ -228,7 +228,7 @@ const GoalItem: React.FC<{
             {!isCompleted && (
               <button 
                 onClick={() => onFund(goal)} 
-                className="p-1.5 rounded-lg text-primary bg-primary/10 hover:bg-gradient-to-r hover:from-primary hover:to-primary/80 hover:text-white hover:shadow-md transition-all duration-300 transform hover:scale-105" 
+                className="p-1.5 rounded-lg text-primary bg-primary/10 hover:bg-gradient-to-r hover:from-primary hover:to-primary hover:text-white hover:shadow-md transition-all duration-300 transform hover:scale-105" 
                 title="Nạp tiền"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -353,7 +353,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <button 
                       onClick={() => setWalletModalOpen(true)} 
-                      className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -365,7 +365,7 @@ const Dashboard: React.FC = () => {
                       let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
                       if (React.isValidElement(w.icon)) WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
                       
-                      const walletColor = w.color || 'bg-gradient-to-br from-primary to-primary/80';
+                      const walletColor = w.color || 'bg-gradient-to-br from-primary to-primary';
                       
                       return (
                       <div key={w.id} className="group relative flex items-center justify-between p-4 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl transition-all duration-300 border border-gray-200/70 dark:border-white/10 hover:border-primary/30 hover:shadow-lg hover:scale-[1.002]">
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center relative">
                           <div className="text-right mr-3">
-                            <p className="font-bold text-lg tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                            <p className="font-bold text-lg tracking-tight bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">
                               {formatCurrency(w.balance, true, w.currency)}
                             </p>
                             <p className="text-xs text-muted mt-0.5">{w.currency}</p>
@@ -430,7 +430,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <button 
                   onClick={openAddBudget} 
-                  className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -470,7 +470,7 @@ const Dashboard: React.FC = () => {
                 </div>
                  <button 
                    onClick={openAddGoal} 
-                   className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                   className="p-2.5 rounded-xl bg-gradient-to-r from-primary to-primary text-white hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                  >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -498,7 +498,7 @@ const Dashboard: React.FC = () => {
       {/* 4. FLOATING ACTION BUTTON (Nút thêm giao dịch) */}
       <button 
         onClick={() => setTransactionModalOpen(true)} 
-        className="fixed bottom-8 right-6 bg-gradient-to-br from-primary to-primary/80 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 hover:rotate-90 z-40 group"
+        className="fixed bottom-8 right-6 bg-gradient-to-br from-primary to-primary text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 hover:rotate-90 z-40 group"
       >
         <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -131,7 +131,7 @@ const DebtLoanCard: React.FC<{
                 {!isCompleted && (
                     <button 
                         onClick={onRecordPaymentClick} 
-                        className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary/80 rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
                     >
                         {t('debts.recordPaymentButton')}
                     </button>
@@ -202,7 +202,7 @@ const DebtsLoansPage: React.FC = () => {
                     </div>
                     <button 
                         onClick={handleOpenAdd} 
-                        className="group px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary/80 rounded-xl hover:from-primary/90 hover:to-primary/70 flex items-center transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                        className="group px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary rounded-xl hover:from-primary/90 hover:to-primary/70 flex items-center transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -316,7 +316,7 @@ const DebtsLoansPage: React.FC = () => {
                         </p>
                         <button 
                             onClick={handleOpenAdd}
-                            className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary/80 rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg"
+                            className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-primary to-primary rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg"
                         >
                             Thêm khoản mới
                         </button>

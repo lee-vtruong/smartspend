@@ -49,7 +49,7 @@ const Header: React.FC = () => {
             )}
           </button>
           {notifDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-card/70 backdrop-blur-xl rounded-2xl shadow-lg z-50 border border-white/20 animate-fade-in-down">
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-2xl overflow-hidden rounded-2xl shadow-lg z-50 border border-white/20 animate-fade-in-down">
                 <div className="p-3 border-b border-card-border">
                     <h4 className="font-semibold text-text">Notifications</h4>
                 </div>

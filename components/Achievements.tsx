@@ -65,7 +65,7 @@ const Achievements: React.FC = () => {
                         {unlockedCount}/{BADGES.length} danh hiệu đã mở khóa
                     </p>
                 </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 text-white font-bold text-lg shadow-md">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary text-white font-bold text-lg shadow-md">
                     {unlockedCount}
                 </div>
             </div>
@@ -183,7 +183,7 @@ const Achievements: React.FC = () => {
                 </div>
                 <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2 overflow-hidden">
                     <div 
-                        className="h-2 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-700 ease-out" 
+                        className="h-2 bg-gradient-to-r from-primary to-primary rounded-full transition-all duration-700 ease-out" 
                         style={{ width: `${(unlockedCount / BADGES.length) * 100}%` }}
                     ></div>
                 </div>

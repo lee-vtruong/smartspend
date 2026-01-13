@@ -23,7 +23,7 @@ const EmptyDataState: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-300 max-w-md mb-8 text-sm leading-relaxed">
                 Không có giao dịch nào phát sinh trong khoảng thời gian này. Hãy thử chọn khoảng thời gian khác hoặc thêm giao dịch mới để xem báo cáo chi tiết.
             </p>
-            <div className="w-12 h-1 bg-gradient-to-r from-primary to-primary/80 rounded-full mb-8"></div>
+            <div className="w-12 h-1 bg-gradient-to-r from-primary to-primary rounded-full mb-8"></div>
         </div>
     );
 };
@@ -89,7 +89,7 @@ const SummaryCard: React.FC<{ title: string; amount: number; type: 'income' | 'e
                             ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' 
                             : type === 'expense'
                             ? 'bg-gradient-to-r from-rose-400 to-rose-500'
-                            : 'bg-gradient-to-r from-primary to-primary/80'
+                            : 'bg-gradient-to-r from-primary to-primary'
                     }`} 
                     style={{ width: amount !== 0 ? `${Math.min(Math.abs(amount) / 1000000 * 100, 100)}%` : '0%' }}
                 ></div>
@@ -108,7 +108,7 @@ const TimeframeButton: React.FC<{
         onClick={onClick}
         className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
             currentTimeframe === timeframe 
-            ? 'bg-gradient-to-r from-primary to-primary/80 text-white shadow-md' 
+            ? 'bg-gradient-to-r from-primary to-primary text-white shadow-md' 
             : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
         }`}
     >
