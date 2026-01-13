@@ -89,6 +89,7 @@ export interface AISuggestion {
     title: string;
     description: string;
     priority: 'high' | 'medium' | 'low';
+    action: string;
 }
 
 export interface AIResponse {

@@ -184,7 +184,8 @@
       "week": "Tuần",
       "month": "Tháng",
       "year": "Năm"
-    }
+    },
+    "noData": "Chưa có dữ liệu"
   },
   "settings": {
     "profile": {
@@ -281,7 +282,9 @@
     "amountLabel": "Số tiền",
     "startDateLabel": "Ngày tạo",
     "dueDateLabel": "Hạn trả",
-    "descriptionLabel": "Mô tả / Ghi chú"
+    "descriptionLabel": "Mô tả / Ghi chú",
+    "totalDebts": "Tổng khoản nợ",
+    "totalLoans": "Tổng khoản vay"
   },
   "addDebtLoan": {
     "title": "Thêm khoản Nợ / Cho vay mới",
