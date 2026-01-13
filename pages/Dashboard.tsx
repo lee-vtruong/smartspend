@@ -363,8 +363,10 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-4">
                   {wallets.map(w => {
                       let WalletIcon = <RescueIcon className="h-6 w-6 text-white" />;
-                      if (React.isValidElement(w.icon)) WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { className: 'h-6 w-6 text-white' });
-                      
+                      if (React.isValidElement(w.icon)) 
+                        WalletIcon = React.cloneElement(w.icon as React.ReactElement<any>, { 
+                          className: 'h-6 w-6 text-primary'  // hoặc màu tương phản
+                        });
                       const walletColor = w.color || 'bg-gradient-to-br from-primary to-primary';
                       
                       return (
